@@ -1,0 +1,36 @@
+/************************************************************/
+/*****              SqlDataProvider                     *****/
+/*****                                                  *****/
+/*****                                                  *****/
+/***** Note: To manually execute this script you must   *****/
+/*****       perform a search and replace operation     *****/
+/*****       for {databaseOwner} and {objectQualifier}  *****/
+/*****                                                  *****/
+/************************************************************/
+
+/*    Insert Detailed Permissions                           */
+/************************************************************/
+
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_FOLDER', -1, 'ADD', 'Add', 1, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_FOLDER', -1, 'COPY', 'Copy', 2, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_FOLDER', -1, 'DELETE', 'Delete', 3, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_FOLDER', -1, 'MANAGE', 'Manage', 4, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_MODULE_DEFINITION', -1, 'CONTENT', 'Content', 1, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_MODULE_DEFINITION', -1, 'DELETE', 'Delete', 2, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_MODULE_DEFINITION', -1, 'EXPORT', 'Export', 3, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_MODULE_DEFINITION', -1, 'IMPORT', 'Import', 4, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_MODULE_DEFINITION', -1, 'MANAGE', 'Manage', 5, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'ADD', 'Add', 1, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'CONTENT', 'Content', 2, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'COPY', 'Copy', 3, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'DELETE', 'Delete', 4, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'EXPORT', 'Export', 5, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'IMPORT', 'Import', 6, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'MANAGE', 'Manage', 7, -1, GETDATE(), -1, GETDATE())
+INSERT INTO {databaseOwner}[{objectQualifier}Permission] ([PermissionCode], [ModuleDefID], [PermissionKey], [PermissionName], [ViewOrder], [CreatedByUserID], [CreatedOnDate], [LastModifiedByUserID], [LastModifiedOnDate]) VALUES ('SYSTEM_TAB', -1, 'NAVIGATE', 'Navigate', 8, -1, GETDATE(), -1, GETDATE())
+
+GO
+
+/************************************************************/
+/*****              SqlDataProvider                     *****/
+/************************************************************/
