@@ -768,7 +768,7 @@ namespace Dnn.PersonaBar.Pages.Components
             page.HasAVisibleVersion = tab.HasAVisibleVersion;
             page.HasBeenPublished = tab.HasBeenPublished;
             page.IsWorkflowCompleted = WorkflowHelper.IsWorkflowCompleted(tab);
-            page.IsWorkflowOnDraft = WorkflowEngine.Instance.IsWorkflowCompleted(tab);
+            page.IsWorkflowOnDraft = WorkflowEngine.Instance.IsWorkflowOnDraft(tab);
             page.WorkflowId = WorkflowHelper.GetTabWorkflowId(tab);
             page.WorkflowName = WorkflowRepository.Instance.GetWorkflow(page.WorkflowId).WorkflowName;
             page.StateId = tab.StateID;
