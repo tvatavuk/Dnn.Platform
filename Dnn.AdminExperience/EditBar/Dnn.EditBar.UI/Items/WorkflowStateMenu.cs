@@ -6,25 +6,23 @@ namespace Dnn.EditBar.UI.Items
 {
     using System;
 
-    using Dnn.EditBar.Library;
     using Dnn.EditBar.Library.Items;
+    using Dnn.PersonaBar.Pages.Components;
     using DotNetNuke.Application;
     using DotNetNuke.Entities.Content.Common;
-    using DotNetNuke.Entities.Content.Workflow;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Tabs;
     using DotNetNuke.Entities.Tabs.TabVersions;
-    using DotNetNuke.Security.Permissions;
     using DotNetNuke.Services.Personalization;
 
     [Serializable]
-    public class CompleteStateMenu : BaseMenuItem
+    public class WorkflowStateMenu : BaseMenuItem
     {
         /// <inheritdoc/>
-        public override string Name { get; } = "CompleteState";
+        public override string Name { get; } = "WorkflowState";
 
         /// <inheritdoc/>
-        public override string Text => "Submit";
+        public override string Text => TabController.CurrentPage.HasBeenPublished && WorkflowHelper.IsWorkflowCompleted(TabController.CurrentPage) ? "Published" : "Draft";
 
         /// <inheritdoc/>
         public override string CssClass => string.Empty;
@@ -33,13 +31,13 @@ namespace Dnn.EditBar.UI.Items
         public override string Template { get; } = string.Empty;
 
         /// <inheritdoc/>
-        public override string Parent { get; } = Constants.LeftMenu;
+        public override string Parent { get; } = Library.Constants.LeftMenu;
 
         /// <inheritdoc/>
-        public override string Loader { get; } = "CompleteState";
+        public override string Loader { get; } = "WorkflowState";
 
         /// <inheritdoc/>
-        public override int Order { get; } = 78;
+        public override int Order { get; } = 77;
 
         /// <inheritdoc/>
         public override bool Visible()
@@ -48,9 +46,7 @@ namespace Dnn.EditBar.UI.Items
             return Personalization.GetUserMode() == PortalSettings.Mode.Edit
                 && DotNetNukeContext.Current.Application.SKU == "DNN" // IsPlatform
                 && TabVersionSettings.Instance.IsVersioningEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // versioning is enabled
-                && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // workflow is enabled
-                && ((WorkflowEngine.Instance.IsWorkflowOnDraft(contentItem) && PermissionProvider.Instance().CanAddContentToPage(TabController.CurrentPage))
-                    || (!WorkflowEngine.Instance.IsWorkflowCompleted(contentItem) && WorkflowSecurity.Instance.HasStateReviewerPermission(contentItem.StateID)));
+                && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID); // workflow is enabled
         }
     }
 }

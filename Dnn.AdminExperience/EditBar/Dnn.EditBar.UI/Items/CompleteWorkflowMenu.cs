@@ -13,6 +13,7 @@ namespace Dnn.EditBar.UI.Items
     using DotNetNuke.Entities.Content.Workflow;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Tabs;
+    using DotNetNuke.Entities.Tabs.TabVersions;
     using DotNetNuke.Services.Personalization;
 
     [Serializable]
@@ -37,7 +38,7 @@ namespace Dnn.EditBar.UI.Items
         public override string Loader { get; } = "CompleteWorkflow";
 
         /// <inheritdoc/>
-        public override int Order { get; } = 79;
+        public override int Order { get; } = 80;
 
         /// <inheritdoc/>
         public override bool Visible()
@@ -45,7 +46,8 @@ namespace Dnn.EditBar.UI.Items
             var contentItem = Util.GetContentController().GetContentItem(TabController.CurrentPage.ContentItemId);
             return Personalization.GetUserMode() == PortalSettings.Mode.Edit
                    && DotNetNukeContext.Current.Application.SKU == "DNN" // IsPlatform
-                   && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId) // workflow is enabled
+                   && TabVersionSettings.Instance.IsVersioningEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // versioning is enabled
+                   && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // workflow is enabled
                    && !WorkflowEngine.Instance.IsWorkflowCompleted(contentItem) // tab has new version that is not published
                    && WorkflowSecurity.Instance.HasStateReviewerPermission(contentItem.StateID); // user has workflow approval permission
         }

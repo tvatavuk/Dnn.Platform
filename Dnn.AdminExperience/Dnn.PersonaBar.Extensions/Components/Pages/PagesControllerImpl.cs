@@ -20,9 +20,12 @@ namespace Dnn.PersonaBar.Pages.Components
     using DotNetNuke.Entities.Content;
     using DotNetNuke.Entities.Content.Common;
     using DotNetNuke.Entities.Content.Taxonomy;
+    using DotNetNuke.Entities.Content.Workflow;
+    using DotNetNuke.Entities.Content.Workflow.Repositories;
     using DotNetNuke.Entities.Modules;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Tabs;
+    using DotNetNuke.Entities.Tabs.TabVersions;
     using DotNetNuke.Entities.Urls;
     using DotNetNuke.Entities.Users;
     using DotNetNuke.Framework;
@@ -760,6 +763,18 @@ namespace Dnn.PersonaBar.Pages.Components
                 };
             }
 
+            page.EnabledVersioning = TabVersionSettings.Instance.IsVersioningEnabled(portalSettings.PortalId, pageId);
+            page.WorkflowEnabled = TabWorkflowSettings.Instance.IsWorkflowEnabled(portalSettings.PortalId, pageId);
+            page.HasAVisibleVersion = tab.HasAVisibleVersion;
+            page.HasBeenPublished = tab.HasBeenPublished;
+            page.IsWorkflowCompleted = WorkflowHelper.IsWorkflowCompleted(tab);
+            page.IsWorkflowOnDraft = WorkflowEngine.Instance.IsWorkflowCompleted(tab);
+            page.WorkflowId = WorkflowHelper.GetTabWorkflowId(tab);
+            page.WorkflowName = WorkflowRepository.Instance.GetWorkflow(page.WorkflowId).WorkflowName;
+            page.StateId = tab.StateID;
+            page.StateName = WorkflowStateManager.Instance.GetWorkflowState(tab.StateID).StateName;
+            page.PublishStatus = tab.HasBeenPublished && page.IsWorkflowCompleted ? "Published" : "Draft";
+
             return page;
         }
 
@@ -1232,6 +1247,19 @@ namespace Dnn.PersonaBar.Pages.Components
             else
             {
                 tab.IconFileLarge = null;
+            }
+
+            var tabVersionSettings = TabVersionSettings.Instance;
+            var tabWorkflowSettings = TabWorkflowSettings.Instance;
+
+            if (pageSettings.EnabledVersioning.HasValue && tabVersionSettings.IsVersioningEnabled(tab.PortalID))
+            {
+                tabVersionSettings.SetEnabledVersioningForTab(tab.TabID, pageSettings.EnabledVersioning.Value);
+            }
+
+            if (pageSettings.WorkflowEnabled.HasValue && tabWorkflowSettings.IsWorkflowEnabled(tab.PortalID))
+            {
+                tabWorkflowSettings.SetWorkflowEnabled(tab.PortalID, tab.TabID, pageSettings.WorkflowEnabled.Value);
             }
         }
 
