@@ -45,8 +45,20 @@ class More extends Component {
         this.props.onClearCache(this.props.page.cacheProvider);
     }
 
+    getWorkflowOptions() {
+        return this.props.workflowList.length ? this.props.workflowList.map((item => { return { value: item.workflowId, label: item.workflowName }; })) : null;
+    }
+
+    onWorkflowDropDownChange(option) {
+        this.props.onChangeField("workflowId", option.value);
+        this.props.page.workflowId = option.value;
+        this.setState({
+            page: {...this.props.page},
+        });
+    }
+
     render() {
-        const { page, errors, onChangeField, cacheProviderList } = this.props;
+        const { page, errors, onChangeField, cacheProviderList, workflowList } = this.props;
         const cacheProviderOptions = cacheProviderList &&
             [{ value: null, label: Localization.get("None") },
                 ...cacheProviderList.map(x => ({ value: x, label: x }))];
@@ -191,6 +203,14 @@ class More extends Component {
                                 offText={Localization.get("Off")}
                                 value={page.workflowEnabled}
                                 onChange={onChangeField.bind(this, "workflowEnabled")} />
+                            {page.workflowEnabled &&
+                            <Dropdown
+                                className="more-dropdown"
+                                options={this.getWorkflowOptions()}
+                                label={page.workflowId ? this.getWorkflowOptions().find(x => x.value === page.workflowId).label : Localization.get("Workflow")}
+                                value={page.workflowId !== "" && page.workflowId}
+                                onSelect={this.onWorkflowDropDownChange.bind(this)}                               
+                                withBorder={true} />}
                         </GridCell>
                     </GridSystem></>
                 }
@@ -207,13 +227,16 @@ More.propTypes = {
     onGetCachedPageCount: PropTypes.func.isRequired,
     cachedPageCount: PropTypes.number,
     onClearCache: PropTypes.func.isRequired,
-    errors: PropTypes.object.isRequired
+    errors: PropTypes.object.isRequired,
+    workflowList: PropTypes.array,
+    getWorkflowsList: PropTypes.func.isRequired,
 };
 
 function mapStateToProps(state) {
     return {
         cacheProviderList: state.pages.cacheProviderList,
-        cachedPageCount: state.pages.cachedPageCount
+        cachedPageCount: state.pages.cachedPageCount,
+        workflowList: state.pages.workflowList,
     };
 }
 

@@ -528,9 +528,14 @@ namespace Dnn.PersonaBar.Pages.Components
             this.SavePagePermissions(tab, pageSettings.Permissions);
 
             var tabId = this.tabController.AddTab(tab);
-            tab = this.tabController.GetTab(tabId, portalId);
 
             this.CreateOrUpdateContentItem(tab);
+
+            this.tabController.UpdateTab(tab);
+
+            tab = this.tabController.GetTab(tabId, portalId);
+
+            this.UpdateTabWorkflowFromPageSettings(tab, pageSettings);
 
             if (pageSettings.TemplateTabId > 0)
             {
@@ -765,15 +770,15 @@ namespace Dnn.PersonaBar.Pages.Components
 
             page.EnabledVersioning = TabVersionSettings.Instance.IsVersioningEnabled(portalSettings.PortalId, pageId);
             page.WorkflowEnabled = TabWorkflowSettings.Instance.IsWorkflowEnabled(portalSettings.PortalId, pageId);
+            page.WorkflowId = WorkflowHelper.GetTabWorkflowId(tab);
+            page.WorkflowName = WorkflowRepository.Instance.GetWorkflow(page.WorkflowId).WorkflowName;
+            page.StateId = tab.StateID;
+            page.StateName = tab.StateID != Null.NullInteger ? WorkflowStateManager.Instance.GetWorkflowState(tab.StateID).StateName : null;
+            page.PublishStatus = tab.HasBeenPublished && page.IsWorkflowCompleted ? "Published" : "Draft";
             page.HasAVisibleVersion = tab.HasAVisibleVersion;
             page.HasBeenPublished = tab.HasBeenPublished;
             page.IsWorkflowCompleted = WorkflowHelper.IsWorkflowCompleted(tab);
             page.IsWorkflowOnDraft = WorkflowEngine.Instance.IsWorkflowOnDraft(tab);
-            page.WorkflowId = WorkflowHelper.GetTabWorkflowId(tab);
-            page.WorkflowName = WorkflowRepository.Instance.GetWorkflow(page.WorkflowId).WorkflowName;
-            page.StateId = tab.StateID;
-            page.StateName = WorkflowStateManager.Instance.GetWorkflowState(tab.StateID).StateName;
-            page.PublishStatus = tab.HasBeenPublished && page.IsWorkflowCompleted ? "Published" : "Draft";
 
             return page;
         }
@@ -828,6 +833,9 @@ namespace Dnn.PersonaBar.Pages.Components
         public int UpdateTab(TabInfo tab, PageSettings pageSettings)
         {
             this.UpdateTabInfoFromPageSettings(tab, pageSettings);
+
+            this.UpdateTabWorkflowFromPageSettings(tab, pageSettings);
+
             this.SavePagePermissions(tab, pageSettings.Permissions);
 
             this.tabController.UpdateTab(tab);
@@ -929,6 +937,12 @@ namespace Dnn.PersonaBar.Pages.Components
             {
                 pageSettings.IsSecure = true;
             }
+
+            var tabVersionSettings = TabVersionSettings.Instance;
+            var tabWorkflowSettings = TabWorkflowSettings.Instance;
+            pageSettings.EnabledVersioning = tabVersionSettings.IsVersioningEnabled(portalSettings.PortalId);
+            pageSettings.WorkflowEnabled = tabWorkflowSettings.IsWorkflowEnabled(portalSettings.PortalId);
+            pageSettings.WorkflowId = tabWorkflowSettings.GetDefaultTabWorkflowId(portalSettings.PortalId);
 
             return pageSettings;
         }
@@ -1248,7 +1262,10 @@ namespace Dnn.PersonaBar.Pages.Components
             {
                 tab.IconFileLarge = null;
             }
+        }
 
+        protected void UpdateTabWorkflowFromPageSettings(TabInfo tab, PageSettings pageSettings)
+        {
             var tabVersionSettings = TabVersionSettings.Instance;
             var tabWorkflowSettings = TabWorkflowSettings.Instance;
 
@@ -1261,6 +1278,8 @@ namespace Dnn.PersonaBar.Pages.Components
             {
                 tabWorkflowSettings.SetWorkflowEnabled(tab.PortalID, tab.TabID, pageSettings.WorkflowEnabled.Value);
             }
+
+            ChangeContentWorkflow(tab, pageSettings);
         }
 
         protected IOrderedEnumerable<KeyValuePair<int, string>> GetLocales(int portalId)
@@ -1327,6 +1346,28 @@ namespace Dnn.PersonaBar.Pages.Components
         private static bool HasTags(string tags, IEnumerable<Term> terms)
         {
             return tags.Split(',').All(tag => terms.Any(t => string.Compare(t.Name, tag, StringComparison.CurrentCultureIgnoreCase) == 0));
+        }
+
+        private static void ChangeContentWorkflow(TabInfo tab, PageSettings pageSettings)
+        {
+            var currentState = WorkflowStateRepository.Instance.GetWorkflowStateByID(tab.StateID);
+            if (pageSettings.WorkflowId == currentState?.WorkflowID)
+            {
+                return;
+            }
+
+            var newWorkflow = WorkflowManager.Instance.GetWorkflow(pageSettings.WorkflowId);
+
+            // Can't find workflow. This is not expected.
+            if (newWorkflow == null)
+            {
+                return;
+            }
+
+            // Change to new workflow
+            tab.StateID = WorkflowEngine.Instance.IsWorkflowCompleted(tab.ContentItemId)
+                ? newWorkflow.LastState.StateID // Workflow is completed, just change to last state ("Published") of new workflow
+                : newWorkflow.FirstState.StateID; // Workflow bot completed, just change to first state ("Draft") of new workflow
         }
 
         private bool IsChild(int portalId, int tabId, int parentId)
