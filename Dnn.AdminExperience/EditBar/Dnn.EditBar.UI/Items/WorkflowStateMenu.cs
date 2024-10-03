@@ -5,24 +5,16 @@
 namespace Dnn.EditBar.UI.Items
 {
     using System;
-
-    using Dnn.EditBar.Library.Items;
-    using Dnn.PersonaBar.Pages.Components;
-    using DotNetNuke.Application;
-    using DotNetNuke.Entities.Content.Common;
-    using DotNetNuke.Entities.Portals;
-    using DotNetNuke.Entities.Tabs;
-    using DotNetNuke.Entities.Tabs.TabVersions;
-    using DotNetNuke.Services.Personalization;
+    using System.Linq;
 
     [Serializable]
-    public class WorkflowStateMenu : BaseMenuItem
+    public class WorkflowStateMenu : WorkflowBaseMenuItem
     {
         /// <inheritdoc/>
         public override string Name { get; } = "WorkflowState";
 
         /// <inheritdoc/>
-        public override string Text => TabController.CurrentPage.HasBeenPublished && WorkflowHelper.IsWorkflowCompleted(TabController.CurrentPage) ? "Published" : "Draft";
+        public override string Text => $"<small>{this.Workflow.WorkflowName}:</small><br>{this.RenderStates()}";
 
         /// <inheritdoc/>
         public override string CssClass => string.Empty;
@@ -39,14 +31,19 @@ namespace Dnn.EditBar.UI.Items
         /// <inheritdoc/>
         public override int Order { get; } = 77;
 
-        /// <inheritdoc/>
-        public override bool Visible()
+        // render list of workflow states from first state to current workflow state
+        private string RenderStates()
         {
-            var contentItem = Util.GetContentController().GetContentItem(TabController.CurrentPage.ContentItemId);
-            return Personalization.GetUserMode() == PortalSettings.Mode.Edit
-                && DotNetNukeContext.Current.Application.SKU == "DNN" // IsPlatform
-                && TabVersionSettings.Instance.IsVersioningEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // versioning is enabled
-                && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID); // workflow is enabled
+            var currentState = $"<strong>{this.WorkflowState.StateName}</strong>";
+            if (this.IsFirstState || this.IsLastState)
+            {
+                return currentState;
+            }
+
+            // return "Draft > Review > Review2" for example
+            var pastStates = this.Workflow.States.Where(s => s.Order < this.WorkflowState.Order).OrderBy(s => s.Order).ToList();
+            var pastStatesHtml = string.Join(" &gt; ", pastStates.Select(s => $"{s.StateName}"));
+            return string.Join(" &gt; ", pastStatesHtml, currentState);
         }
     }
 }

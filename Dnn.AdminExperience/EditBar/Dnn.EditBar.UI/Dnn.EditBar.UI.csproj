@@ -96,6 +96,7 @@
     <Compile Include="HttpModules\EditBarModule.cs" />
     <Compile Include="Items\AddExistingModuleMenu.cs" />
     <Compile Include="Items\AddModuleMenu.cs" />
+    <Compile Include="Items\WorkflowBaseMenuItem.cs" />
     <Compile Include="Items\WorkflowStateMenu.cs" />
     <Compile Include="Items\CompleteWorkflowMenu.cs" />
     <Compile Include="Items\DiscardWorkflowMenu.cs" />

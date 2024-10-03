@@ -7,24 +7,15 @@ namespace Dnn.EditBar.UI.Items
     using System;
 
     using Dnn.EditBar.Library;
-    using Dnn.EditBar.Library.Items;
-    using DotNetNuke.Application;
-    using DotNetNuke.Entities.Content.Common;
-    using DotNetNuke.Entities.Content.Workflow;
-    using DotNetNuke.Entities.Portals;
-    using DotNetNuke.Entities.Tabs;
-    using DotNetNuke.Entities.Tabs.TabVersions;
-    using DotNetNuke.Security.Permissions;
-    using DotNetNuke.Services.Personalization;
 
     [Serializable]
-    public class DiscardWorkflowMenu : BaseMenuItem
+    public class DiscardWorkflowMenu : WorkflowBaseMenuItem
     {
         /// <inheritdoc/>
         public override string Name { get; } = "DiscardWorkflow";
 
         /// <inheritdoc/>
-        public override string Text => "Reject";
+        public override string Text => "Discard";
 
         /// <inheritdoc/>
         public override string CssClass => string.Empty;
@@ -42,15 +33,8 @@ namespace Dnn.EditBar.UI.Items
         public override int Order { get; } = 81;
 
         /// <inheritdoc/>
-        public override bool Visible()
-        {
-            var contentItem = Util.GetContentController().GetContentItem(TabController.CurrentPage.ContentItemId);
-            return Personalization.GetUserMode() == PortalSettings.Mode.Edit
-                   && DotNetNukeContext.Current.Application.SKU == "DNN" // IsPlatform
-                   && TabVersionSettings.Instance.IsVersioningEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // versioning is enabled
-                   && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // workflow is enabled
-                   && !WorkflowEngine.Instance.IsWorkflowCompleted(contentItem) // tab has new version that is not published
-                   && WorkflowSecurity.Instance.HasStateReviewerPermission(contentItem.StateID); // user has workflow approval permission
-        }
+        public override bool Visible() => base.Visible()
+            && ((!this.IsLastState && (this.IsDraftWithPermissions || this.IsReviewOrOtherIntermediateStateWithPermissions))
+            || (this.IsLastState && this.HasUnpublishVersion && this.HasDraftPermission)); // for Direct Publish workflow
     }
 }

@@ -7,23 +7,15 @@ namespace Dnn.EditBar.UI.Items
     using System;
 
     using Dnn.EditBar.Library;
-    using Dnn.EditBar.Library.Items;
-    using DotNetNuke.Application;
-    using DotNetNuke.Entities.Content.Common;
-    using DotNetNuke.Entities.Content.Workflow;
-    using DotNetNuke.Entities.Portals;
-    using DotNetNuke.Entities.Tabs;
-    using DotNetNuke.Entities.Tabs.TabVersions;
-    using DotNetNuke.Services.Personalization;
 
     [Serializable]
-    public class CompleteWorkflowMenu : BaseMenuItem
+    public class CompleteWorkflowMenu : WorkflowBaseMenuItem
     {
         /// <inheritdoc/>
         public override string Name { get; } = "CompleteWorkflow";
 
         /// <inheritdoc/>
-        public override string Text => "Approve";
+        public override string Text => "Publish";
 
         /// <inheritdoc/>
         public override string CssClass => string.Empty;
@@ -38,18 +30,12 @@ namespace Dnn.EditBar.UI.Items
         public override string Loader { get; } = "CompleteWorkflow";
 
         /// <inheritdoc/>
-        public override int Order { get; } = 80;
+        public override int Order { get; } = 79;
 
         /// <inheritdoc/>
-        public override bool Visible()
-        {
-            var contentItem = Util.GetContentController().GetContentItem(TabController.CurrentPage.ContentItemId);
-            return Personalization.GetUserMode() == PortalSettings.Mode.Edit
-                   && DotNetNukeContext.Current.Application.SKU == "DNN" // IsPlatform
-                   && TabVersionSettings.Instance.IsVersioningEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // versioning is enabled
-                   && TabWorkflowSettings.Instance.IsWorkflowEnabled(PortalSettings.Current.PortalId, TabController.CurrentPage.TabID) // workflow is enabled
-                   && !WorkflowEngine.Instance.IsWorkflowCompleted(contentItem) // tab has new version that is not published
-                   && WorkflowSecurity.Instance.HasStateReviewerPermission(contentItem.StateID); // user has workflow approval permission
-        }
+        public override bool Visible() => base.Visible()
+            && (this.IsReviewOrOtherIntermediateStateWithPermissions
+                || (this.IsPriorState && this.IsDraftWithPermissions) // for Save Draft workflow
+                || (this.IsLastState && this.HasUnpublishVersion && this.HasDraftPermission)); // for Direct Publish workflow
     }
 }
