@@ -27,15 +27,10 @@ namespace DotNetNuke.Entities.Content.Workflow.Actions.TabActions
 
         /// <inheritdoc />
         public ActionMessage GetActionMessage(StateTransaction stateTransaction, WorkflowState currentState)
-        {
-            var contentItem = GetContentItem(stateTransaction.ContentItemId);
-
-            // TODO: add real message with localization
-            return new ActionMessage
+            => new ()
             {
-                Subject = $"DiscardState TabAction {nameof(DiscardState)}: {contentItem.ContentTitle}",
-                Body = $"DiscardState TabAction {nameof(DiscardState)}...",
+                Subject = GetString($"{nameof(DiscardState)}{nameof(ActionMessage.Subject)}", "Page Rejected"),
+                Body = GetString($"{nameof(DiscardState)}{nameof(ActionMessage.Body)}", "The edits for page '{0}' were rejected, and it is now in '{1}' state.", GetTab(stateTransaction.ContentItemId).LocalizedTabName, currentState.StateName),
             };
-        }
     }
 }

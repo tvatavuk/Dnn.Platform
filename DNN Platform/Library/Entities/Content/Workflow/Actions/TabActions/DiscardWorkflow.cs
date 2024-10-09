@@ -58,16 +58,11 @@ namespace DotNetNuke.Entities.Content.Workflow.Actions.TabActions
 
         /// <inheritdoc />
         public ActionMessage GetActionMessage(StateTransaction stateTransaction, WorkflowState currentState)
-        {
-            var contentItem = GetContentItem(stateTransaction.ContentItemId);
-
-            // TODO: add real message with localization
-            return new ActionMessage
+            => new ()
             {
-                Subject = $"DiscardWorkflow TabAction {nameof(DiscardWorkflow)}: {contentItem.ContentTitle}",
-                Body = $"DiscardWorkflow TabAction {nameof(DiscardWorkflow)}...",
+                Subject = GetString($"{nameof(DiscardWorkflow)}{nameof(ActionMessage.Subject)}", "Page Discarded"),
+                Body = GetString($"{nameof(DiscardWorkflow)}{nameof(ActionMessage.Body)}", "Edits for page '{0}' have been discarded.", GetTab(stateTransaction.ContentItemId).LocalizedTabName),
             };
-        }
 
         /// <summary>
         /// Checks if the tab has only one version.

@@ -13,6 +13,7 @@ namespace DotNetNuke.Entities.Content.Workflow.Actions.TabActions
     using DotNetNuke.Entities.Content.Common;
     using DotNetNuke.Entities.Content.Workflow.Dto;
     using DotNetNuke.Entities.Tabs;
+    using DotNetNuke.Services.Localization;
 
     /// <summary>
     /// TabActions base class.
@@ -58,5 +59,27 @@ namespace DotNetNuke.Entities.Content.Workflow.Actions.TabActions
 
             return CBO.FillObject<TabInfo>(DataProvider.Instance().ExecuteSQL(Sql, parameters));
         }
+
+        /// <summary>
+        /// Gets the localized string value for the specified key.
+        /// </summary>
+        /// <param name="key">The key of the string to retrieve.</param>
+        /// <param name="defaultValue">The default value to return if the string is not found.</param>
+        /// <returns>The localized string value.</returns>
+        internal static string GetString(string key, string defaultValue)
+        {
+            var content = Localization.GetString(key, Localization.GlobalResourceFile);
+            return string.IsNullOrEmpty(content) ? defaultValue : content;
+        }
+
+        /// <summary>
+        /// Gets the formatted localized string value for the specified key for parameters.
+        /// </summary>
+        /// <param name="key">The key of the string to retrieve.</param>
+        /// <param name="defaultValue">The default value to return if the string is not found.</param>
+        /// <param name="params">The parameters to format the string.</param>
+        /// <returns>The formatted localized string value.</returns>
+        internal static string GetString(string key, string defaultValue, params object[] @params)
+            => string.Format(GetString(key, defaultValue), @params);
     }
 }

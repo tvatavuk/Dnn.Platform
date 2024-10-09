@@ -37,15 +37,10 @@ namespace DotNetNuke.Entities.Content.Workflow.Actions.TabActions
 
         /// <inheritdoc />
         public ActionMessage GetActionMessage(StateTransaction stateTransaction, WorkflowState currentState)
-        {
-            var contentItem = GetContentItem(stateTransaction.ContentItemId);
-
-            // TODO: add real message with localization
-            return new ActionMessage
+            => new ()
             {
-                Subject = $"CompleteWorkflow TabAction {nameof(CompleteWorkflow)}: {contentItem.ContentTitle}",
-                Body = $"CompleteWorkflow TabAction {nameof(CompleteWorkflow)}...",
+                Subject = GetString($"{nameof(CompleteWorkflow)}{nameof(ActionMessage.Subject)}", "Page Published"),
+                Body = GetString($"{nameof(CompleteWorkflow)}{nameof(ActionMessage.Body)}", "Page '{0}' has been published and is now live.", GetTab(stateTransaction.ContentItemId).LocalizedTabName),
             };
-        }
     }
 }

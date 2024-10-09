@@ -25,15 +25,10 @@ namespace DotNetNuke.Entities.Content.Workflow.Actions.TabActions
 
         /// <inheritdoc />
         public ActionMessage GetActionMessage(StateTransaction stateTransaction, WorkflowState currentState)
-        {
-            var contentItem = GetContentItem(stateTransaction.ContentItemId);
-
-            // TODO: add real message with localization
-            return new ActionMessage
+            => new ()
             {
-                Subject = $"StartWorkflow TabAction {nameof(StartWorkflow)}: {contentItem.ContentTitle}",
-                Body = $"StartWorkflow TabAction {nameof(StartWorkflow)}...",
+                Subject = GetString($"{nameof(StartWorkflow)}{nameof(ActionMessage.Subject)}", "Page Submitted"),
+                Body = GetString($"{nameof(StartWorkflow)}{nameof(ActionMessage.Body)}", "Page '{0}' is in the '{1}' state and waiting to be submitted.", GetTab(stateTransaction.ContentItemId).LocalizedTabName, currentState.StateName),
             };
-        }
     }
 }
