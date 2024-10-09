@@ -771,7 +771,7 @@ namespace Dnn.PersonaBar.Pages.Components
             page.EnabledVersioning = TabVersionSettings.Instance.IsVersioningEnabled(portalSettings.PortalId, pageId);
             page.WorkflowEnabled = TabWorkflowSettings.Instance.IsWorkflowEnabled(portalSettings.PortalId, pageId);
             page.WorkflowId = WorkflowHelper.GetTabWorkflowId(tab);
-            page.WorkflowName = WorkflowRepository.Instance.GetWorkflow(page.WorkflowId).WorkflowName;
+            page.WorkflowName = WorkflowHelper.GetTabWorkflowName(tab);
             page.StateId = tab.StateID;
             page.StateName = tab.StateID != Null.NullInteger ? WorkflowStateManager.Instance.GetWorkflowState(tab.StateID).StateName : null;
             page.PublishStatus = tab.HasBeenPublished && page.IsWorkflowCompleted ? "Published" : "Draft";

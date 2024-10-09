@@ -449,14 +449,14 @@ class MoreSettingsPanelBody extends Component {
                         </div>
                     </GridSystem>
                     {util.isPlatform() && <>
-                        <div className="sectionTitle">Workflow</div>
+                        <div className="sectionTitle">{resx.get("WorkflowSettings")}</div>
                         <GridSystem numberOfColumns={2}>
                             <div key="column-one-left" className="left-column">
                                 <InputGroup>
                                     <Label
                                         labelType="inline"
-                                        tooltipMessage="TabVersionSettings"
-                                        label="EnabledVersioning" />
+                                        tooltipMessage={resx.get("plEnabledVersioning.Help")}
+                                        label={resx.get("plEnabledVersioning")} />
                                     <Switch
                                         onText={resx.get("SwitchOn")}
                                         offText={resx.get("SwitchOff")}
@@ -465,8 +465,8 @@ class MoreSettingsPanelBody extends Component {
                                 </InputGroup>
                                 <InputGroup>
                                     <Label
-                                        tooltipMessage="TabVersionSettings"
-                                        label="MaxNumberOfVersions" />
+                                        tooltipMessage={resx.get("plMaxNumberOfVersions.Help")}
+                                        label={resx.get("plMaxNumberOfVersions")} />
                                     <Dropdown
                                         options={this.getMaxNumberOfVersionsOptions(20)}
                                         value={state.otherSettings.MaxNumberOfVersions}
@@ -477,8 +477,8 @@ class MoreSettingsPanelBody extends Component {
                                 <InputGroup>
                                     <Label
                                         labelType="inline"
-                                        tooltipMessage="TabWorkflowSettings"
-                                        label="WorkflowEnabled" />
+                                        tooltipMessage={resx.get("plWorkflowEnabled.Help")}
+                                        label={resx.get("plWorkflowEnabled")} />
                                     <Switch
                                         onText={resx.get("SwitchOn")}
                                         offText={resx.get("SwitchOff")}
@@ -487,8 +487,8 @@ class MoreSettingsPanelBody extends Component {
                                 </InputGroup>
                                 <InputGroup>
                                     <Label
-                                        tooltipMessage="TabWorkflowSettings"
-                                        label="DefaultTabWorkflowId" />
+                                        tooltipMessage={resx.get("plDefaultTabWorkflowId.Help")}
+                                        label={resx.get("plDefaultTabWorkflowId")} />
                                     <Dropdown
                                         options={this.getWorkflowsOptions()}
                                         value={state.otherSettings.DefaultTabWorkflowId}

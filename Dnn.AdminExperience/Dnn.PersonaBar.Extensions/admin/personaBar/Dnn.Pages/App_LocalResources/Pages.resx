@@ -1768,4 +1768,13 @@
   <data name="NoParentTabName.Text" xml:space="preserve">
     <value>No parent page supplied</value>
   </data>
+  <data name="FilterByPublishDateText.Text" xml:space="preserve">
+    <value>Filter by Publish Date</value>
+  </data>
+  <data name="FilterbyWorkflowText.Text" xml:space="preserve">
+    <value>Filter by Workflow</value>
+  </data>
+  <data name="WorkflowTitle.Text" xml:space="preserve">
+    <value>Workflow</value>
+  </data>
 </root>

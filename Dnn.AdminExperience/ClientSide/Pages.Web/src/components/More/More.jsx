@@ -183,8 +183,8 @@ class More extends Component {
                         <GridCell className="left-column">
                             <Label
                                 labelType="inline"
-                                tooltipMessage="TabVersionSettings"
-                                label="EnabledVersioning" />
+                                tooltipMessage={Localization.get("EnabledVersioning_tooltip")}
+                                label={Localization.get("EnabledVersioning")} />
                             <Switch
                                 onText={Localization.get("On")}
                                 offText={Localization.get("Off")}
@@ -196,8 +196,8 @@ class More extends Component {
 
                             <Label
                                 labelType="inline"
-                                tooltipMessage="TabWorkflowSettings"
-                                label="WorkflowEnabled" />
+                                tooltipMessage={Localization.get("WorkflowEnabled_tooltip")}
+                                label={Localization.get("WorkflowEnabled")} />
                             <Switch
                                 onText={Localization.get("On")}
                                 offText={Localization.get("Off")}
