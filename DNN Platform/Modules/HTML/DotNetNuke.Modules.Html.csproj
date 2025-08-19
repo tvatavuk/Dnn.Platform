@@ -158,6 +158,13 @@
     <Compile Include="HtmlModule.ascx.designer.cs">
       <DependentUpon>HtmlModule.ascx</DependentUpon>
     </Compile>
+    <Compile Include="Models\ContentWorkflowStateRow.cs" />
+    <Compile Include="Models\ContentWorkflowRow.cs" />
+    <Compile Include="Models\LegacyWorkflowStateRow.cs" />
+    <Compile Include="Models\LegacyWorkflowRow.cs" />
+    <Compile Include="Models\HtmlTextLogRow.cs" />
+    <Compile Include="Models\HtmlTextRow.cs" />
+    <Compile Include="Models\ModuleRow.cs" />
     <Compile Include="MyWork.ascx.cs">
       <DependentUpon>MyWork.ascx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
