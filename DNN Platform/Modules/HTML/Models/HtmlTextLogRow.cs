@@ -8,7 +8,7 @@ using DotNetNuke.ComponentModel.DataAnnotations;
 
 // DAL2 POCOs for migration
 [TableName("HtmlTextLog")]
-[PrimaryKey("LogID", AutoIncrement = true)]
+[PrimaryKey("HtmlTextLogID", AutoIncrement = true)]
 internal sealed class HtmlTextLogRow
 {
     public int HtmlTextLogID { get; set; }

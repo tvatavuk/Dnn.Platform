@@ -29,13 +29,17 @@ public class MigrateHelper
         var localizationHelper = new LocalizationHelper();
 
         // "Published,veröffentlicht,Publicado,Publié,Pubblicato,Publiceren"
-        var publishedLocalizations = localizationHelper.StateLocalizations("DefaultWorkflowState3.StateName");
+        var publishedNames = new HashSet<string>(
+            localizationHelper.StateLocalizations("DefaultWorkflowState3.StateName").Select(Normalize),
+            StringComparer.OrdinalIgnoreCase);
 
         // "Draft,Entwurf,Borrador,Brouillon,Bozza,Concept"
-        var draftLocalizations = localizationHelper.StateLocalizations("DefaultWorkflowState1.StateName");
+        var draftNames = new HashSet<string>(
+            localizationHelper.StateLocalizations("DefaultWorkflowState1.StateName").Select(Normalize),
+            StringComparer.OrdinalIgnoreCase);
 
         // 1. Execute the migration logic in-code (replaces the stored procedure call)
-        RunHtmlWorkflowMigration(databaseOwner, objectQualifier, publishedLocalizations, draftLocalizations);
+        RunHtmlWorkflowMigration(databaseOwner, objectQualifier, publishedNames, draftNames);
 
         // 2. Add FK_HtmlText_WorkflowStates if it does not exist
         db.ExecuteSQL($@"
@@ -83,7 +87,7 @@ public class MigrateHelper
     /// to the new ContentWorkflows/ContentWorkflowStates, using localized Draft/Published names.
     /// Uses DAL 2 repositories and an in-memory mapping; no inline SQL.
     /// </summary>
-    private static void RunHtmlWorkflowMigration(string databaseOwner, string objectQualifier, List<string> publishedNames, List<string> draftNames)
+    private static void RunHtmlWorkflowMigration(string databaseOwner, string objectQualifier, ISet<string> publishedNames, ISet<string> draftNames)
     {
         using (var ctx = DataContext.Instance())
         {
@@ -200,7 +204,14 @@ public class MigrateHelper
                 }
 
                 var published = states.FirstOrDefault(s => publishedNames.Contains(Normalize(s.StateName)));
-                return published?.StateID;
+                if (published != null)
+                {
+                    return published.StateID;
+                }
+
+                // DirectPublish should only have a single state; fall back to the first entry regardless of name.
+                var fallbackState = states.OrderBy(s => s.StateID).FirstOrDefault();
+                return fallbackState?.StateID;
             }
 
             // Phase 1 + 2 + fallback for HtmlText
@@ -282,7 +293,7 @@ public class MigrateHelper
 
     private static string Normalize(string s) => (s ?? string.Empty).Trim();
 
-    private static ContentWorkflowStateRow FindMatchingNewState(IEnumerable<ContentWorkflowStateRow> targetStates, string legacyStateName, List<string> publishedNames, List<string> draftNames)
+    private static ContentWorkflowStateRow FindMatchingNewState(IEnumerable<ContentWorkflowStateRow> targetStates, string legacyStateName, ISet<string> publishedNames, ISet<string> draftNames)
     {
         var legacy = Normalize(legacyStateName);
 
@@ -322,8 +333,8 @@ public class MigrateHelper
         IDictionary<int, LegacyWorkflowStateRow> legacyStateById,
         IDictionary<int, List<ContentWorkflowStateRow>> cwsByWorkflow,
         IEnumerable<ContentWorkflowRow> allCw,
-        List<string> publishedNames,
-        List<string> draftNames)
+        ISet<string> publishedNames,
+        ISet<string> draftNames)
     {
         if (!legacyStateById.TryGetValue(legacyStateId, out var legacyState))
         {
