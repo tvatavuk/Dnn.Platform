@@ -136,7 +136,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
                     LogController.Instance.DeleteLog(objLogInfo);
                 }
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -198,7 +198,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
             try
             {
                 this.controller.ClearLog();
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -332,7 +332,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
                     configInfo.LogTypeFriendlyName,
                     configInfo.LogTypeKey,
                     LogTypePortalID =
-                            int.TryParse(configInfo.LogTypePortalID, out portalId) ? portalId.ToString() : "*",
+                            int.TryParse(configInfo.LogTypePortalID, out portalId) ? portalId.ToString(CultureInfo.InvariantCulture) : "*",
                     LogTypePortalName =
                             int.TryParse(configInfo.LogTypePortalID, out portalId)
                                 ? PortalController.Instance.GetPortal(portalId).PortalName
@@ -391,7 +391,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
         {
             try
             {
-                request.LogTypePortalID = this.UserInfo.IsSuperUser ? request.LogTypePortalID : this.PortalId.ToString();
+                request.LogTypePortalID = this.UserInfo.IsSuperUser ? request.LogTypePortalID : this.PortalId.ToString(CultureInfo.InvariantCulture);
 
                 int requestPortalId;
                 int settingPortalId;
@@ -452,7 +452,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
             try
             {
                 var logTypes = LogController.Instance.GetLogTypeConfigInfo().Cast<LogTypeConfigInfo>()
-                    .OrderByDescending(l => Convert.ToInt32(l.ID)).ToList();
+                    .OrderByDescending(l => Convert.ToInt32(l.ID, CultureInfo.InvariantCulture)).ToList();
                 var configInfo = logTypes.FirstOrDefault();
 
                 if (configInfo != null)
@@ -465,7 +465,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
                         configInfo.LogTypeFriendlyName,
                         configInfo.LogTypeKey,
                         LogTypePortalID =
-                            int.TryParse(configInfo.LogTypePortalID, out portalId) ? portalId.ToString() : "*",
+                            int.TryParse(configInfo.LogTypePortalID, out portalId) ? portalId.ToString(CultureInfo.InvariantCulture) : "*",
                         LogTypePortalName =
                             int.TryParse(configInfo.LogTypePortalID, out portalId)
                                 ? PortalController.Instance.GetPortal(portalId).PortalName
@@ -480,7 +480,7 @@ namespace Dnn.PersonaBar.AdminLogs.Services
                     });
                 }
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {

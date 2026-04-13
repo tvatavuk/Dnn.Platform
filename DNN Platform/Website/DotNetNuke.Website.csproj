@@ -55,7 +55,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\DotNetNuke.Website.XML</DocumentationFile>
-    <NoWarn>1591</NoWarn>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>SA1600</WarningsNotAsErrors>
@@ -68,7 +67,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\DotNetNuke.Website.XML</DocumentationFile>
-    <NoWarn>1591</NoWarn>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>SA1600</WarningsNotAsErrors>
@@ -536,7 +534,6 @@
     <Content Include="Licenses\NTestDataBuilder %28MIT%29.txt.resources" />
     <Content Include="Licenses\NUnit %28MIT%29.txt.resources" />
     <Content Include="Licenses\PetaPoco %28Apache%29.txt.resources" />
-    <Content Include="Licenses\Pikaday %28MIT%29.txt.resources" />
     <Content Include="Licenses\QuickIO.NET %28Ms-PL%29.txt.resources" />
     <AdditionalFiles Include="..\..\stylecop.json">
       <Link>stylecop.json</Link>
@@ -765,10 +762,11 @@
     <Content Include="Licenses\CodeMirror %28MIT%29.txt.resources" />
     <Content Include="Portals\_default\Skins\_default\WebControlSkin\Default\DropDownList.Default.css" />
     <Content Include="Portals\_default\Skins\_default\WebControlSkin\Default\GridView.Default.css" />
-    <Content Include="Resources\Shared\components\DatePicker\moment.min.js" />
-    <Content Include="Resources\Shared\components\DatePicker\pikaday.css" />
-    <Content Include="Resources\Shared\components\DatePicker\pikaday.jquery.js" />
-    <Content Include="Resources\Shared\components\DatePicker\pikaday.js" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.01.02.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.02.00.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.02.01.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.02.02.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.02.04.SqlDataProvider" />
     <Content Include="Resources\Shared\components\SimpleMDE\codemirror.css" />
     <Content Include="Resources\Shared\components\SimpleMDE\marked.js" />
     <Content Include="Resources\Shared\components\SimpleMDE\simplemde.css" />
@@ -1202,8 +1200,19 @@
     <Content Include="Install\Config\09.13.04.config" />
     <Content Include="Providers\DataProviders\SqlDataProvider\09.13.04.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\09.13.08.SqlDataProvider" />
-    <Content Include="Install\Config\10.02.00.config" />
-    <Content Include="Install\Config\10.02.01.config" />
+    <Content Include="Install\Config\10.02.04.config" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\09.12.00.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\09.13.00.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\09.13.02.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\09.13.03.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\09.13.09.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.00.00.01.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.00.00.02.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.00.00.03.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.00.01.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.01.00.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.01.01.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.02.03.SqlDataProvider" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
@@ -2961,7 +2970,9 @@
     </Content>
     <Content Include="App_GlobalResources\List_Country.resx" />
     <Content Include="App_GlobalResources\Prompt.resx" />
-    <Content Include="App_GlobalResources\SharedResources.resx" />
+    <Content Include="App_GlobalResources\SharedResources.resx">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="App_GlobalResources\WebControls.resx" />
     <Content Include="controls\App_LocalResources\Address.ascx.resx" />
     <Content Include="controls\App_LocalResources\DualListControl.ascx.resx" />
@@ -3303,6 +3314,10 @@
       <Project>{6928a9b1-f88a-4581-a132-d3eb38669bb0}</Project>
       <Name>DotNetNuke.Abstractions</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DotNetNuke.ContentSecurityPolicy\DotNetNuke.ContentSecurityPolicy.csproj">
+      <Project>{33c9571d-e3af-46fc-dc75-9ca082bbdc3d}</Project>
+      <Name>DotNetNuke.ContentSecurityPolicy</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DotNetNuke.Instrumentation\DotNetNuke.Instrumentation.csproj">
       <Project>{3cd5f6b8-8360-4862-80b6-f402892db7dd}</Project>
       <Name>DotNetNuke.Instrumentation</Name>
@@ -3360,15 +3375,7 @@
     <Content Include="Portals\_default\Default Website.template.resources" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="StyleCop.Analyzers">
-      <Version>1.2.0-beta.556</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

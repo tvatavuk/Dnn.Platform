@@ -4,10 +4,12 @@
 
 namespace DotNetNuke.Entities.Users.Membership
 {
+    using System;
     using System.Diagnostics.CodeAnalysis;
     using System.Web;
     using System.Web.Security;
 
+    using DotNetNuke.Common.Utilities;
     using DotNetNuke.Security.Membership;
 
     public class MembershipPasswordSettings
@@ -87,10 +89,10 @@ namespace DotNetNuke.Entities.Users.Membership
 
         private static bool IsInstallRequest(HttpRequest request)
         {
-            var url = request.Url.LocalPath.ToLowerInvariant();
+            var url = request.Url.LocalPath;
 
-            return url.EndsWith("/install.aspx")
-                   || url.Contains("/installwizard.aspx");
+            return url.EndsWith("/install.aspx", StringComparison.OrdinalIgnoreCase)
+                   || url.Contains("/installwizard.aspx", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

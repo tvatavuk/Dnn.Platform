@@ -7,9 +7,9 @@ import IpFilterEditor from "./ipfilterEditor";
 import util from "../../utils";
 import resx from "../../resources";
 import { SvgIcons } from "@dnnsoftware/dnn-react-common";
-import WarningIcon from "./../svg/error.svg";
+import WarningIcon from "./../svg/error.svg?react";
 import styles from "./style.module.less";
- 
+
 
 let tableFields = [];
 
@@ -84,7 +84,7 @@ class IpFiltersPanelBody extends Component {
         });
     }
 
-     
+
     renderedIpFilters() {
         let i = 0;
         return this.props.ipFilters.map((item, index) => {
@@ -136,8 +136,8 @@ class IpFiltersPanelBody extends Component {
                     <div className="ip-filter-items-grid">
                         {this.renderHeader()}
                         <IpFilterRow
-                            ipFilterId={"-"}
-                            ruleType={"-"}
+                            ipFilterId={-1}
+                            ruleType={0}
                             ipFilter={"-"}
                             index={"add"}
                             key={"ipFilter-add"}

@@ -4,19 +4,26 @@
 namespace DotNetNuke.UI.WebControls
 {
     using System;
+    using System.Globalization;
     using System.Web.UI;
 
     using DotNetNuke.Common;
-    using DotNetNuke.Common.Extensions;
     using DotNetNuke.Common.Lists;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Profile;
     using DotNetNuke.Security;
 
+    using Microsoft.Extensions.DependencyInjection;
+
     /// <summary>The ProfileEditorControl control provides a Control to display Profile Properties.</summary>
+    /// <param name="serviceProvider">The DI container.</param>
+    /// <param name="listController">The list controller.</param>
     [ToolboxData("<{0}:ProfileEditorControl runat=server></{0}:ProfileEditorControl>")]
-    public class ProfileEditorControl : CollectionEditorControl
+    public class ProfileEditorControl(IServiceProvider serviceProvider, ListController listController)
+        : CollectionEditorControl(serviceProvider)
     {
+        private readonly ListController listController = listController ?? Globals.GetCurrentServiceProvider().GetRequiredService<ListController>();
+
         /// <summary>Initializes a new instance of the <see cref="ProfileEditorControl"/> class.</summary>
         [Obsolete("Deprecated in DotNetNuke 10.0.0. Please use overload with IServiceProvider. Scheduled removal in v12.0.0.")]
         public ProfileEditorControl()
@@ -26,8 +33,9 @@ namespace DotNetNuke.UI.WebControls
 
         /// <summary>Initializes a new instance of the <see cref="ProfileEditorControl"/> class.</summary>
         /// <param name="serviceProvider">The DI container.</param>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
         public ProfileEditorControl(IServiceProvider serviceProvider)
-            : base(serviceProvider)
+            : this(serviceProvider, null)
         {
         }
 
@@ -53,9 +61,9 @@ namespace DotNetNuke.UI.WebControls
                 ProfilePropertyDefinitionCollection definitions = editor.DataSource as ProfilePropertyDefinitionCollection;
                 ProfilePropertyDefinition definition = definitions[fieldName];
 
-                if (definition != null && definition.ReadOnly && (editor.Editor.EditMode == PropertyEditorMode.Edit))
+                if (definition is { ReadOnly: true, } && editor.Editor.EditMode == PropertyEditorMode.Edit)
                 {
-                    PortalSettings ps = PortalController.Instance.GetCurrentPortalSettings();
+                    var ps = PortalController.Instance.GetCurrentSettings();
                     if (!PortalSecurity.IsInRole(ps.AdministratorRoleName))
                     {
                         editor.Editor.EditMode = PropertyEditorMode.View;
@@ -69,23 +77,20 @@ namespace DotNetNuke.UI.WebControls
 
                     foreach (FieldEditorControl checkEditor in this.Fields)
                     {
-                        if (checkEditor.Editor is DNNCountryEditControl)
+                        if (checkEditor.Editor is DNNCountryEditControl countryEdit)
                         {
-                            if (editor.Editor.Category == checkEditor.Editor.Category)
+                            if (editor.Editor.Category == countryEdit.Category)
                             {
-                                var countryEdit = (DNNCountryEditControl)checkEditor.Editor;
-                                country = Convert.ToString(countryEdit.Value);
+                                country = Convert.ToString(countryEdit.Value, CultureInfo.InvariantCulture);
                             }
                         }
                     }
 
                     // Create a ListAttribute for the Region
                     string countryKey = "Unknown";
-                    int entryId;
-                    if (int.TryParse(country, out entryId))
+                    if (int.TryParse(country, out var entryId))
                     {
-                        ListController lc = new ListController();
-                        ListEntryInfo item = lc.GetListEntryInfo(entryId);
+                        ListEntryInfo item = this.listController.GetListEntryInfo(entryId);
                         if (item != null)
                         {
                             countryKey = item.Value;

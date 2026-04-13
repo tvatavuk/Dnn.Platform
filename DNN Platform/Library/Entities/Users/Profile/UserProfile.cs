@@ -11,13 +11,15 @@ namespace DotNetNuke.Entities.Users
 
     using DotNetNuke.Collections;
     using DotNetNuke.Common;
-    using DotNetNuke.Common.Internal;
     using DotNetNuke.Common.Lists;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Profile;
     using DotNetNuke.Instrumentation;
     using DotNetNuke.Services.FileSystem;
+
+    using Microsoft.Extensions.DependencyInjection;
+
     using Newtonsoft.Json;
 
     /// <summary>The UserProfile class provides a Business Layer entity for the Users Profile.</summary>
@@ -25,6 +27,7 @@ namespace DotNetNuke.Entities.Users
     public class UserProfile : IIndexable
     {
 #pragma warning disable SA1310 // Field names should not contain underscore
+#pragma warning disable CA1707 // Identifiers should not contain underscores
 #pragma warning disable SA1600 // Elements should be documented
         // Name properties
         [Obsolete("Deprecated in DotNetNuke 9.8.0. Use the properties on this class instead. Scheduled for removal in v11.0.0.")]
@@ -74,6 +77,7 @@ namespace DotNetNuke.Entities.Users
         [Obsolete("Deprecated in DotNetNuke 9.8.0. Use the properties on this class instead. Scheduled for removal in v11.0.0.")]
         public const string USERPROFILE_Biography = UserProfileBiography;
 #pragma warning restore SA1310 // Field names should not contain underscore
+#pragma warning restore CA1707 // Identifiers should not contain underscores
 #pragma warning restore SA1600 // Elements should be documented
 
         private const string UserProfileFirstName = "FirstName";
@@ -101,21 +105,18 @@ namespace DotNetNuke.Entities.Users
         private const string UserProfilePreferredLocale = "PreferredLocale";
         private const string UserProfilePreferredTimeZone = "PreferredTimeZone";
         private const string UserProfileBiography = "Biography";
-        private bool isDirty;
 
         private UserInfo user;
 
         // collection to store all profile properties.
         private ProfilePropertyDefinitionCollection profileProperties;
 
-        // Address Properties
-
         /// <summary>Initializes a new instance of the <see cref="UserProfile"/> class.</summary>
         public UserProfile()
         {
         }
 
-        /// <summary>Initializes a new instance of the <see cref="UserProfile"/> class with a proficed existing user.</summary>
+        /// <summary>Initializes a new instance of the <see cref="UserProfile"/> class with a provided existing user.</summary>
         /// <param name="user">The user this profile belongs to.</param>
         public UserProfile(UserInfo user)
         {
@@ -123,22 +124,11 @@ namespace DotNetNuke.Entities.Users
         }
 
         /// <summary>Gets the full name by concatenating the first and last name with a space.</summary>
-        public string FullName
-        {
-            get
-            {
-                return this.FirstName + " " + this.LastName;
-            }
-        }
+        public string FullName => $"{this.FirstName} {this.LastName}";
 
         /// <summary>Gets a value indicating whether a property has been changed.</summary>
-        public bool IsDirty
-        {
-            get
-            {
-                return this.isDirty;
-            }
-        }
+        [XmlIgnore]
+        public bool IsDirty { get; private set; }
 
         /// <summary>Gets a URL for the profile picture - if the path contains invalid url characters it will return a fileticket.</summary>
         public string PhotoURL
@@ -155,7 +145,7 @@ namespace DotNetNuke.Entities.Users
                     bool isVisible = ProfilePropertyAccess.CheckAccessLevel(settings, photoProperty, user, this.user);
                     if (!string.IsNullOrEmpty(photoProperty.PropertyValue) && isVisible)
                     {
-                        var fileInfo = FileManager.Instance.GetFile(int.Parse(photoProperty.PropertyValue));
+                        var fileInfo = FileManager.Instance.GetFile(int.Parse(photoProperty.PropertyValue, CultureInfo.InvariantCulture));
                         if (fileInfo != null)
                         {
                             photoURL = FileManager.Instance.GetUrl(fileInfo);
@@ -168,149 +158,76 @@ namespace DotNetNuke.Entities.Users
         }
 
         /// <summary>Gets the Collection of Profile Properties.</summary>
-        public ProfilePropertyDefinitionCollection ProfileProperties
-        {
-            get { return this.profileProperties ?? (this.profileProperties = new ProfilePropertyDefinitionCollection()); }
-        }
+        public ProfilePropertyDefinitionCollection ProfileProperties => this.profileProperties ??= new ProfilePropertyDefinitionCollection();
 
         /// <summary>Gets or sets the Cell/Mobile Phone.</summary>
         public string Cell
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileCell);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileCell, value);
-            }
+            get => this.GetPropertyValue(UserProfileCell);
+            set => this.SetProfileProperty(UserProfileCell, value);
         }
 
         /// <summary>Gets or sets the City part of the Address.</summary>
         public string City
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileCity);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileCity, value);
-            }
+            get => this.GetPropertyValue(UserProfileCity);
+            set => this.SetProfileProperty(UserProfileCity, value);
         }
 
         /// <summary>Gets or sets the Country part of the Address.</summary>
         public string Country
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileCountry);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileCountry, value);
-            }
+            get => this.GetPropertyValue(UserProfileCountry);
+            set => this.SetProfileProperty(UserProfileCountry, value);
         }
 
         /// <summary>Gets or sets the Fax Phone.</summary>
         public string Fax
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileFax);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileFax, value);
-            }
+            get => this.GetPropertyValue(UserProfileFax);
+            set => this.SetProfileProperty(UserProfileFax, value);
         }
 
         /// <summary>Gets or sets the First Name.</summary>
         public string FirstName
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileFirstName);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileFirstName, value);
-            }
+            get => this.GetPropertyValue(UserProfileFirstName);
+            set => this.SetProfileProperty(UserProfileFirstName, value);
         }
 
         /// <summary>Gets or sets the Instant Messenger Handle.</summary>
         public string IM
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileIM);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileIM, value);
-            }
+            get => this.GetPropertyValue(UserProfileIM);
+            set => this.SetProfileProperty(UserProfileIM, value);
         }
 
         /// <summary>Gets or sets the Last Name.</summary>
         public string LastName
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileLastName);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileLastName, value);
-            }
+            get => this.GetPropertyValue(UserProfileLastName);
+            set => this.SetProfileProperty(UserProfileLastName, value);
         }
 
         /// <summary>Gets or sets the path to the profile picture.</summary>
         public string Photo
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfilePhoto);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfilePhoto, value);
-            }
+            get => this.GetPropertyValue(UserProfilePhoto);
+            set => this.SetProfileProperty(UserProfilePhoto, value);
         }
 
         /// <summary>Gets or sets the PostalCode part of the Address.</summary>
         public string PostalCode
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfilePostalCode);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfilePostalCode, value);
-            }
+            get => this.GetPropertyValue(UserProfilePostalCode);
+            set => this.SetProfileProperty(UserProfilePostalCode, value);
         }
 
         /// <summary>Gets or sets the Preferred Locale.</summary>
         public string PreferredLocale
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfilePreferredLocale);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfilePreferredLocale, value);
-            }
+            get => this.GetPropertyValue(UserProfilePreferredLocale);
+            set => this.SetProfileProperty(UserProfilePreferredLocale, value);
         }
 
         /// <summary>Gets or sets the preferred time zone.</summary>
@@ -356,102 +273,53 @@ namespace DotNetNuke.Entities.Users
         /// <summary>Gets or sets the Region part of the Address.</summary>
         public string Region
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileRegion);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileRegion, value);
-            }
+            get => this.GetPropertyValue(UserProfileRegion);
+            set => this.SetProfileProperty(UserProfileRegion, value);
         }
 
         /// <summary>Gets or sets the Street part of the Address.</summary>
         public string Street
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileStreet);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileStreet, value);
-            }
+            get => this.GetPropertyValue(UserProfileStreet);
+            set => this.SetProfileProperty(UserProfileStreet, value);
         }
 
         /// <summary>Gets or sets the telephone number.</summary>
         public string Telephone
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileTelephone);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileTelephone, value);
-            }
+            get => this.GetPropertyValue(UserProfileTelephone);
+            set => this.SetProfileProperty(UserProfileTelephone, value);
         }
 
         /// <summary>Gets or sets the Title.</summary>
         public string Title
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileTitle);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileTitle, value);
-            }
+            get => this.GetPropertyValue(UserProfileTitle);
+            set => this.SetProfileProperty(UserProfileTitle, value);
         }
 
         /// <summary>Gets or sets the Unit part of the Address.</summary>
         public string Unit
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileUnit);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileUnit, value);
-            }
+            get => this.GetPropertyValue(UserProfileUnit);
+            set => this.SetProfileProperty(UserProfileUnit, value);
         }
 
         /// <summary>Gets or sets the Website.</summary>
         public string Website
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileWebsite);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileWebsite, value);
-            }
+            get => this.GetPropertyValue(UserProfileWebsite);
+            set => this.SetProfileProperty(UserProfileWebsite, value);
         }
 
         /// <summary>Gets or sets the biography.</summary>
         public string Biography
         {
-            get
-            {
-                return this.GetPropertyValue(UserProfileBiography);
-            }
-
-            set
-            {
-                this.SetProfileProperty(UserProfileBiography, value);
-            }
+            get => this.GetPropertyValue(UserProfileBiography);
+            set => this.SetProfileProperty(UserProfileBiography, value);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public object this[string name]
         {
             get
@@ -462,19 +330,17 @@ namespace DotNetNuke.Entities.Users
             set
             {
                 string stringValue;
-                if (value is DateTime)
+                if (value is DateTime dateValue)
                 {
-                    var dateValue = (DateTime)value;
                     stringValue = dateValue.ToString(CultureInfo.InvariantCulture);
                 }
-                else if (value is TimeZoneInfo)
+                else if (value is TimeZoneInfo timezoneValue)
                 {
-                    var timezoneValue = (TimeZoneInfo)value;
                     stringValue = timezoneValue.Id;
                 }
                 else
                 {
-                    stringValue = Convert.ToString(value);
+                    stringValue = Convert.ToString(value, CultureInfo.InvariantCulture);
                 }
 
                 this.SetProfileProperty(name, stringValue);
@@ -484,7 +350,7 @@ namespace DotNetNuke.Entities.Users
         /// <summary>Clears the IsDirty Flag.</summary>
         public void ClearIsDirty()
         {
-            this.isDirty = false;
+            this.IsDirty = false;
             foreach (ProfilePropertyDefinition profProperty in this.ProfileProperties)
             {
                 profProperty?.ClearIsDirty();
@@ -518,17 +384,17 @@ namespace DotNetNuke.Entities.Users
 
                 if (profileProp.DataType > -1)
                 {
-                    var controller = new ListController();
-                    var dataType = controller.GetListEntryInfo("DataType", profileProp.DataType);
+                    var listController = Globals.GetCurrentServiceProvider().GetRequiredService<ListController>();
+                    var dataType = listController.GetListEntryInfo("DataType", profileProp.DataType);
                     if (dataType == null)
                     {
-                        LoggerSource.Instance.GetLogger(typeof(UserProfile)).ErrorFormat("Invalid data type {0} for profile property {1}", profileProp.DataType, profileProp.PropertyName);
+                        LoggerSource.Instance.GetLogger(typeof(UserProfile)).ErrorFormat(CultureInfo.InvariantCulture, "Invalid data type {0} for profile property {1}", profileProp.DataType, profileProp.PropertyName);
                         return propValue;
                     }
 
-                    if (dataType.Value == "Country" || dataType.Value == "Region")
+                    if (dataType.Value is "Country" or "Region")
                     {
-                        propValue = GetListValue(dataType.Value, propValue);
+                        propValue = GetListValue(listController, dataType.Value, propValue);
                     }
                 }
             }
@@ -536,14 +402,14 @@ namespace DotNetNuke.Entities.Users
             return propValue;
         }
 
-        /// <summary>Initialises the Profile with a collection of profile properties and their default values.</summary>
+        /// <summary>Initializes the Profile with a collection of profile properties and their default values.</summary>
         /// <param name="portalId">The id of the portal this profile belongs to.</param>
         public void InitialiseProfile(int portalId)
         {
             this.InitialiseProfile(portalId, true);
         }
 
-        /// <summary>Initialises the Profile with an empty collection of profile properties or default values.</summary>
+        /// <summary>Initializes the Profile with an empty collection of profile properties or default values.</summary>
         /// <param name="portalId">the id of the portal this profile belongs to.</param>
         /// <param name="useDefaults">A flag that indicates whether the profile default values should be
         /// copied to the Profile.</param>
@@ -560,8 +426,8 @@ namespace DotNetNuke.Entities.Users
         }
 
         /// <summary>Sets a Profile Property Value in the Profile.</summary>
-        /// <param name="propName">The name of the propoerty to set.</param>
-        /// <param name="propValue">The value of the propoerty to set.</param>
+        /// <param name="propName">The name of the property to set.</param>
+        /// <param name="propValue">The value of the property to set.</param>
         public void SetProfileProperty(string propName, string propValue)
         {
             ProfilePropertyDefinition profileProp = this.GetProperty(propName);
@@ -572,16 +438,14 @@ namespace DotNetNuke.Entities.Users
                 // Set the IsDirty flag
                 if (profileProp.IsDirty)
                 {
-                    this.isDirty = true;
+                    this.IsDirty = true;
                 }
             }
         }
 
-        private static string GetListValue(string listName, string value)
+        private static string GetListValue(ListController listController, string listName, string value)
         {
-            ListController listController = new ListController();
-            int entryId;
-            if (int.TryParse(value, out entryId))
+            if (int.TryParse(value, out var entryId))
             {
                 ListEntryInfo item = listController.GetListEntryInfo(listName, entryId);
                 if (item != null)

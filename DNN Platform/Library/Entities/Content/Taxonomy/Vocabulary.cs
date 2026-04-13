@@ -6,6 +6,7 @@ namespace DotNetNuke.Entities.Content.Taxonomy
     using System;
     using System.Collections.Generic;
     using System.Data;
+    using System.Globalization;
 
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Content.Common;
@@ -118,7 +119,9 @@ namespace DotNetNuke.Entities.Content.Taxonomy
 
             set
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 this.description = Security.InputFilter(value, PortalSecurity.FilterFlag.NoMarkup);
+#pragma warning restore CS0618 // Type or member is obsolete
             }
         }
 
@@ -149,7 +152,9 @@ namespace DotNetNuke.Entities.Content.Taxonomy
                     value = System.Net.WebUtility.HtmlDecode(value);
                 }
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 this.name = Security.InputFilter(value, PortalSecurity.FilterFlag.NoMarkup);
+#pragma warning restore CS0618 // Type or member is obsolete
             }
         }
 
@@ -218,7 +223,7 @@ namespace DotNetNuke.Entities.Content.Taxonomy
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public virtual int KeyID
         {
             get
@@ -232,11 +237,11 @@ namespace DotNetNuke.Entities.Content.Taxonomy
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public virtual void Fill(IDataReader dr)
         {
             this.VocabularyId = Null.SetNullInteger(dr["VocabularyID"]);
-            switch (Convert.ToInt16(dr["VocabularyTypeID"]))
+            switch (Convert.ToInt16(dr["VocabularyTypeID"], CultureInfo.InvariantCulture))
             {
                 case 1:
                     this.Type = VocabularyType.Simple;

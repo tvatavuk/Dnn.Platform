@@ -4,6 +4,7 @@
 namespace DotNetNuke.Entities.Users
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
 
     using DotNetNuke.Services.Tokens;
@@ -19,16 +20,11 @@ namespace DotNetNuke.Entities.Users
             this.objUser = user;
         }
 
-        /// <inheritdoc/>
-        public CacheLevel Cacheability
-        {
-            get
-            {
-                return CacheLevel.notCacheable;
-            }
-        }
+        /// <inheritdoc />
+        public CacheLevel Cacheability => CacheLevel.notCacheable;
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
+        [SuppressMessage("Microsoft.Naming", "CA1725:ParameterNamesShouldMatchBaseDeclaration", Justification = "Breaking change")]
         public string GetProperty(string propertyName, string format, CultureInfo formatProvider, UserInfo accessingUser, Scope currentScope, ref bool propertyNotFound)
         {
             UserMembership objMembership = this.objUser.Membership;
@@ -53,8 +49,10 @@ namespace DotNetNuke.Entities.Users
                     return PropertyAccess.Boolean2LocalizedYesNo(objMembership.Approved, formatProvider);
                 case "createdondate":
                     return objMembership.CreatedDate.ToString(outputFormat, formatProvider);
+#pragma warning disable CS0618 // Type or member is obsolete
                 case "isonline":
                     return PropertyAccess.Boolean2LocalizedYesNo(objMembership.IsOnLine, formatProvider);
+#pragma warning restore CS0618 // Type or member is obsolete
                 case "lastactivitydate":
                     return objMembership.LastActivityDate.ToString(outputFormat, formatProvider);
                 case "lastlockoutdate":
@@ -74,7 +72,7 @@ namespace DotNetNuke.Entities.Users
                 case "passwordquestion":
                     return PropertyAccess.FormatString(objMembership.PasswordQuestion, format);
                 case "passwordresettoken":
-                    return PropertyAccess.FormatString(Convert.ToString(this.objUser.PasswordResetToken), format);
+                    return PropertyAccess.FormatString(Convert.ToString(this.objUser.PasswordResetToken, CultureInfo.InvariantCulture), format);
                 case "passwordresetexpiration":
                     return PropertyAccess.FormatString(this.objUser.PasswordResetExpiration.ToString(formatProvider), format);
                 case "updatepassword":

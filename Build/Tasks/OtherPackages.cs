@@ -27,11 +27,12 @@ namespace DotNetNuke.Build.Tasks
     [IsDependentOn(typeof(PackageSharpZipLib))]
     [IsDependentOn(typeof(PackageMicrosoftExtensionsDependencyInjection))]
     [IsDependentOn(typeof(PackageMicrosoftWebInfrastructure))]
+    [IsDependentOn(typeof(PackageMicrosoftCodeDomProvidersDotNetCompilerPlatform))]
     public sealed class OtherPackages : FrostingTask<Context>
     {
         private static readonly string[] IncludeAll = ["**/*",];
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override void Run(Context context)
         {
             var otherPackages = context.DeserializeJsonFromFile<IEnumerable<OtherPackage>>("./Build/Tasks/thirdparty.json");

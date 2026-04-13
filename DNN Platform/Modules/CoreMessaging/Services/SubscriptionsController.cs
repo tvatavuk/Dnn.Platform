@@ -13,7 +13,9 @@ namespace DotNetNuke.Modules.CoreMessaging.Services
     using System.Web.Http;
     using System.Xml;
 
+    using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Abstractions.Portals;
+    using DotNetNuke.Common;
     using DotNetNuke.Entities.Modules;
     using DotNetNuke.Modules.CoreMessaging.ViewModels;
     using DotNetNuke.Services.Exceptions;
@@ -23,20 +25,31 @@ namespace DotNetNuke.Modules.CoreMessaging.Services
     using DotNetNuke.Services.Social.Subscriptions.Entities;
     using DotNetNuke.Web.Api;
 
+    using Microsoft.Extensions.DependencyInjection;
+
     /// <summary>Provides a web service to manage subscriptions.</summary>
+    /// <param name="hostSettings">The host settings.</param>
     [DnnAuthorize]
-    public class SubscriptionsController : DnnApiController
+    public class SubscriptionsController(IHostSettings hostSettings)
+        : DnnApiController
     {
         private const string SharedResources = "~/DesktopModules/CoreMessaging/App_LocalResources/SharedResources.resx";
         private const string ViewControlResources = "~/DesktopModules/CoreMessaging/App_LocalResources/View.ascx.resx";
+        private readonly IHostSettings hostSettings = hostSettings ?? Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>();
+
+        /// <summary>Initializes a new instance of the <see cref="SubscriptionsController"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IHostSettings. Scheduled removal in v12.0.0.")]
+        public SubscriptionsController()
+            : this(null)
+        {
+        }
 
         private string LocalizationFolder
         {
             get
             {
-                return string.Format(
-                    "~/DesktopModules/{0}/App_LocalResources/",
-                    DesktopModuleController.GetDesktopModuleByModuleName("DotNetNuke.Modules.CoreMessaging", this.PortalSettings.PortalId).FolderName);
+                var desktopModule = DesktopModuleController.GetDesktopModuleByModuleName(this.hostSettings, "DotNetNuke.Modules.CoreMessaging", this.PortalSettings.PortalId);
+                return $"~/DesktopModules/{desktopModule.FolderName}/App_LocalResources/";
             }
         }
 
@@ -247,28 +260,29 @@ namespace DotNetNuke.Modules.CoreMessaging.Services
 
         private static IEnumerable<KeyValuePair<string, string>> GetLocalizationValues(string fullPath, string culture)
         {
-            using (var stream = new FileStream(System.Web.HttpContext.Current.Server.MapPath(fullPath), FileMode.Open, FileAccess.Read))
+            using var stream = new FileStream(System.Web.HttpContext.Current.Server.MapPath(fullPath), FileMode.Open, FileAccess.Read);
+            var document = new XmlDocument { XmlResolver = null };
+            using (var xmlReader = XmlReader.Create(stream, new XmlReaderSettings { XmlResolver = null, }))
             {
-                var document = new XmlDocument { XmlResolver = null };
-                document.Load(stream);
+                document.Load(xmlReader);
+            }
 
-                var headers = document.SelectNodes(@"/root/resheader").Cast<XmlNode>().ToArray();
+            var headers = document.SelectNodes(@"/root/resheader").Cast<XmlNode>().ToArray();
 
-                AssertHeaderValue(headers, "resmimetype", "text/microsoft-resx");
+            AssertHeaderValue(headers, "resmimetype", "text/microsoft-resx");
 
-                foreach (var xmlNode in document.SelectNodes("/root/data").Cast<XmlNode>())
+            foreach (var xmlNode in document.SelectNodes("/root/data").Cast<XmlNode>())
+            {
+                var name = GetNameAttribute(xmlNode).Replace(".Text", string.Empty);
+
+                if (string.IsNullOrEmpty(name))
                 {
-                    var name = GetNameAttribute(xmlNode).Replace(".Text", string.Empty);
-
-                    if (string.IsNullOrEmpty(name))
-                    {
-                        continue;
-                    }
-
-                    var value = Localization.GetString(string.Format("{0}.Text", name), fullPath, culture);
-
-                    yield return new KeyValuePair<string, string>(name, value);
+                    continue;
                 }
+
+                var value = Localization.GetString(string.Format("{0}.Text", name), fullPath, culture);
+
+                yield return new KeyValuePair<string, string>(name, value);
             }
         }
 

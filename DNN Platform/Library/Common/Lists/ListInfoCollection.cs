@@ -5,15 +5,28 @@ namespace DotNetNuke.Common.Lists
 {
     using System;
     using System.Collections;
+    using System.Collections.Generic;
 
+    using DotNetNuke.Collections;
+    using DotNetNuke.Common.Utilities;
     using DotNetNuke.Instrumentation;
+
+    using Microsoft.Extensions.DependencyInjection;
 
     /// <summary>Represents a collection of <see cref="ListInfo"/>.</summary>
     [Serializable]
-    public class ListInfoCollection : CollectionBase
+    public class ListInfoCollection(ListController listController) : GenericCollectionBase<ListInfo>
     {
         private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(ListInfoCollection));
-        private readonly Hashtable mKeyIndexLookup = new Hashtable();
+        private readonly ListController listController = listController ?? Globals.GetCurrentServiceProvider().GetRequiredService<ListController>();
+        private readonly Dictionary<string, int> mKeyIndexLookup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Initializes a new instance of the <see cref="ListInfoCollection"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
+        public ListInfoCollection()
+            : this(null)
+        {
+        }
 
         /// <summary>Gets the children from a parent name.</summary>
         /// <param name="parentName">The name of the parent.</param>
@@ -28,13 +41,10 @@ namespace DotNetNuke.Common.Lists
         /// <param name="value">The value of the object.</param>
         public void Add(string key, object value)
         {
-            int index;
-
-            // <tam:note key to be lowercase for appropiated seeking>
             try
             {
-                index = this.List.Add(value);
-                this.mKeyIndexLookup.Add(key.ToLowerInvariant(), index);
+                var index = this.List.Add(value);
+                this.mKeyIndexLookup.Add(key, index);
             }
             catch (Exception exc)
             {
@@ -49,9 +59,7 @@ namespace DotNetNuke.Common.Lists
         {
             try
             {
-                object obj;
-                obj = this.List[index];
-                return obj;
+                return this.List[index];
             }
             catch (Exception exc)
             {
@@ -60,31 +68,26 @@ namespace DotNetNuke.Common.Lists
             }
         }
 
-        /// <summary>Gets a list from a spedific key.</summary>
+        /// <summary>Gets a list from a specific key.</summary>
         /// <param name="key">The key to fetch the list.</param>
         /// <returns>A single list.</returns>
         public object Item(string key)
         {
-            int index;
-            object obj;
-
             // Do validation first
             try
             {
-                if (this.mKeyIndexLookup[key.ToLowerInvariant()] == null)
+                if (!this.mKeyIndexLookup.TryGetValue(key, out var index))
                 {
                     return null;
                 }
+
+                return this.List[index];
             }
             catch (Exception exc)
             {
                 Logger.Error(exc);
                 return null;
             }
-
-            index = Convert.ToInt32(this.mKeyIndexLookup[key.ToLowerInvariant()]);
-            obj = this.List[index];
-            return obj;
         }
 
         /// <summary>Gets a single list.</summary>
@@ -93,14 +96,14 @@ namespace DotNetNuke.Common.Lists
         /// <returns>A list object.</returns>
         public object Item(string key, bool cache)
         {
-            int index;
+            int index = 0;
             object obj = null;
             bool itemExists = false;
 
             // Do validation first
             try
             {
-                if (this.mKeyIndexLookup[key.ToLowerInvariant()] != null)
+                if (this.mKeyIndexLookup.TryGetValue(key, out index))
                 {
                     itemExists = true;
                 }
@@ -113,10 +116,9 @@ namespace DotNetNuke.Common.Lists
             // key will be in format Country.US:Region
             if (!itemExists)
             {
-                var ctlLists = new ListController();
-                string listName = key.Substring(key.IndexOf(":") + 1);
-                string parentKey = key.Replace(listName, string.Empty).TrimEnd(':');
-                ListInfo listInfo = ctlLists.GetListInfo(listName, parentKey);
+                var listName = key.Substring(key.IndexOf(":", StringComparison.Ordinal) + 1);
+                var parentKey = key.Replace(listName, string.Empty).TrimEnd(':');
+                var listInfo = this.listController.GetListInfo(listName, parentKey);
 
                 // the collection has been cache, so add this entry list into it if specified
                 if (cache)
@@ -127,7 +129,6 @@ namespace DotNetNuke.Common.Lists
             }
             else
             {
-                index = Convert.ToInt32(this.mKeyIndexLookup[key.ToLowerInvariant()]);
                 obj = this.List[index];
             }
 

@@ -5,33 +5,53 @@ namespace DotNetNuke.Web.UI.WebControls
 {
     using System;
     using System.Collections.Specialized;
+    using System.Globalization;
     using System.Linq;
     using System.Text;
     using System.Web.UI;
     using System.Web.UI.WebControls;
 
+    using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Content;
     using DotNetNuke.Entities.Content.Taxonomy;
     using DotNetNuke.Services.Localization;
 
-    public class Tags : WebControl, IPostBackEventHandler, IPostBackDataHandler
-    {
-        private string repeatDirection = "Horizontal";
-        private string separator = ",&nbsp;";
+    using Microsoft.Extensions.DependencyInjection;
 
+    /// <summary>A tags control.</summary>
+    /// <param name="vocabularyController">The vocabulary controller.</param>
+    /// <param name="termController">The term controller.</param>
+    public class Tags(IVocabularyController vocabularyController, ITermController termController)
+        : WebControl, IPostBackEventHandler, IPostBackDataHandler
+    {
+        private readonly IVocabularyController vocabularyController = vocabularyController ?? Globals.GetCurrentServiceProvider().GetRequiredService<IVocabularyController>();
+        private readonly ITermController termController = termController ?? Globals.GetCurrentServiceProvider().GetRequiredService<ITermController>();
         private string tags;
 
+        /// <summary>Initializes a new instance of the <see cref="Tags"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IVocabularyController. Scheduled removal in v12.0.0.")]
+        protected Tags()
+            : this(null, null)
+        {
+        }
+
+        /// <summary>An event which is triggered when the tags are updated.</summary>
         public event EventHandler<EventArgs> TagsUpdated;
 
+        /// <summary>Gets or sets the URL of the add image.</summary>
         public string AddImageUrl { get; set; }
 
+        /// <summary>Gets or sets a value indicating whether to allow tagging.</summary>
         public bool AllowTagging { get; set; }
 
+        /// <summary>Gets or sets the URL of the cancel image.</summary>
         public string CancelImageUrl { get; set; }
 
+        /// <summary>Gets or sets the content item.</summary>
         public ContentItem ContentItem { get; set; }
 
+        /// <summary>Gets or sets a value indicating whether it's in edit mode.</summary>
         public bool IsEditMode
         {
             get
@@ -39,7 +59,7 @@ namespace DotNetNuke.Web.UI.WebControls
                 bool isEditMode = false;
                 if (this.ViewState["IsEditMode"] != null)
                 {
-                    isEditMode = Convert.ToBoolean(this.ViewState["IsEditMode"]);
+                    isEditMode = Convert.ToBoolean(this.ViewState["IsEditMode"], CultureInfo.InvariantCulture);
                 }
 
                 return isEditMode;
@@ -51,50 +71,28 @@ namespace DotNetNuke.Web.UI.WebControls
             }
         }
 
+        /// <summary>Gets or sets the URL format string.</summary>
         public string NavigateUrlFormatString { get; set; }
 
-        public string RepeatDirection
-        {
-            get
-            {
-                return this.repeatDirection;
-            }
+        /// <summary>Gets or sets the repeat direction.</summary>
+        public string RepeatDirection { get; set; } = "Horizontal";
 
-            set
-            {
-                this.repeatDirection = value;
-            }
-        }
-
+        /// <summary>Gets or sets the URL of the save image.</summary>
         public string SaveImageUrl { get; set; }
 
-        public string Separator
-        {
-            get
-            {
-                return this.separator;
-            }
+        /// <summary>Gets or sets the separator.</summary>
+        public string Separator { get; set; } = ",&nbsp;";
 
-            set
-            {
-                this.separator = value;
-            }
-        }
-
+        /// <summary>Gets or sets a value indicating whether to show categories.</summary>
         public bool ShowCategories { get; set; }
 
+        /// <summary>Gets or sets a value indicating whether to show tags.</summary>
         public bool ShowTags { get; set; }
 
-        private static Vocabulary TagVocabulary
-        {
-            get
-            {
-                VocabularyController vocabularyController = new VocabularyController();
-                return (from v in vocabularyController.GetVocabularies() where v.IsSystem && v.Name == "Tags" select v).SingleOrDefault();
-            }
-        }
+        private Vocabulary TagVocabulary =>
+            this.vocabularyController.GetVocabularies().SingleOrDefault(v => v.IsSystem && v.Name == "Tags");
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override void RenderControl(HtmlTextWriter writer)
         {
             // Render Outer Div
@@ -110,7 +108,7 @@ namespace DotNetNuke.Web.UI.WebControls
                 writer.RenderBeginTag(HtmlTextWriterTag.Ul);
 
                 // Render Category Links
-                var categories = from cat in this.ContentItem.Terms where cat.VocabularyId != TagVocabulary.VocabularyId select cat;
+                var categories = from cat in this.ContentItem.Terms where cat.VocabularyId != this.TagVocabulary.VocabularyId select cat;
 
                 for (int i = 0; i <= categories.Count() - 1; i++)
                 {
@@ -143,7 +141,7 @@ namespace DotNetNuke.Web.UI.WebControls
                 writer.RenderBeginTag(HtmlTextWriterTag.Ul);
 
                 // Render Tag Links
-                var tags = from cat in this.ContentItem.Terms where cat.VocabularyId == TagVocabulary.VocabularyId select cat;
+                var tags = from cat in this.ContentItem.Terms where cat.VocabularyId == this.TagVocabulary.VocabularyId select cat;
 
                 for (int i = 0; i <= tags.Count() - 1; i++)
                 {
@@ -205,7 +203,7 @@ namespace DotNetNuke.Web.UI.WebControls
             writer.RenderEndTag();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public bool LoadPostData(string postDataKey, NameValueCollection postCollection)
         {
             this.tags = postCollection[postDataKey];
@@ -213,12 +211,12 @@ namespace DotNetNuke.Web.UI.WebControls
             return true;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void RaisePostDataChangedEvent()
         {
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void RaisePostBackEvent(string eventArgument)
         {
             switch (eventArgument)
@@ -238,6 +236,8 @@ namespace DotNetNuke.Web.UI.WebControls
             }
         }
 
+        /// <summary>A method which triggers the <see cref="TagsUpdated"/> event.</summary>
+        /// <param name="e">The event args.</param>
         protected void OnTagsUpdate(EventArgs e)
         {
             if (this.TagsUpdated != null)
@@ -246,7 +246,7 @@ namespace DotNetNuke.Web.UI.WebControls
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnPreRender(EventArgs e)
         {
             base.OnPreRender(e);
@@ -290,7 +290,7 @@ namespace DotNetNuke.Web.UI.WebControls
 
         private void RenderButton(HtmlTextWriter writer, string buttonType, string imageUrl)
         {
-            writer.AddAttribute(HtmlTextWriterAttribute.Title, this.LocalizeString(string.Format("{0}.ToolTip", buttonType)));
+            writer.AddAttribute(HtmlTextWriterAttribute.Title, this.LocalizeString($"{buttonType}.ToolTip"));
             writer.AddAttribute(HtmlTextWriterAttribute.Href, this.Page.ClientScript.GetPostBackClientHyperlink(this, buttonType));
             writer.RenderBeginTag(HtmlTextWriterTag.A);
 
@@ -308,7 +308,7 @@ namespace DotNetNuke.Web.UI.WebControls
 
         private void RenderTerm(HtmlTextWriter writer, Term term, bool renderSeparator)
         {
-            writer.AddAttribute(HtmlTextWriterAttribute.Href, string.Format(this.NavigateUrlFormatString, term.Name));
+            writer.AddAttribute(HtmlTextWriterAttribute.Href, string.Format(CultureInfo.InvariantCulture, this.NavigateUrlFormatString, term.Name));
             writer.AddAttribute(HtmlTextWriterAttribute.Title, term.Name);
             writer.AddAttribute(HtmlTextWriterAttribute.Rel, "tag");
             writer.RenderBeginTag(HtmlTextWriterTag.A);
@@ -337,21 +337,17 @@ namespace DotNetNuke.Web.UI.WebControls
                         if (existingTerm == null)
                         {
                             // Not tagged
-                            TermController termController = new TermController();
-                            Term term =
-                                (from te in termController.GetTermsByVocabulary(TagVocabulary.VocabularyId) where te.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase) select te).
-                                    SingleOrDefault();
+                            Term term = this.termController.GetTermsByVocabulary(this.TagVocabulary.VocabularyId).SingleOrDefault(te => te.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase));
                             if (term == null)
                             {
                                 // Add term
-                                term = new Term(TagVocabulary.VocabularyId);
-                                term.Name = tagName;
-                                termController.AddTerm(term);
+                                term = new Term(this.TagVocabulary.VocabularyId) { Name = tagName, };
+                                this.termController.AddTerm(term);
                             }
 
                             // Add term to content
                             this.ContentItem.Terms.Add(term);
-                            termController.AddTermToContent(term, this.ContentItem);
+                            this.termController.AddTermToContent(term, this.ContentItem);
                         }
                     }
                 }

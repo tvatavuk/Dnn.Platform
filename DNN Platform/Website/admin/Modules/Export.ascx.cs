@@ -4,12 +4,14 @@
 namespace DotNetNuke.Modules.Admin.Modules
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Text;
     using System.Web.UI.WebControls;
     using System.Xml;
 
     using DotNetNuke.Abstractions;
+    using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Abstractions.Modules;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
@@ -29,6 +31,7 @@ namespace DotNetNuke.Modules.Admin.Modules
     {
         private readonly IBusinessControllerProvider businessControllerProvider;
         private readonly INavigationManager navigationManager;
+        private readonly IHostSettings hostSettings;
 
         private int moduleId = -1;
         private ModuleInfo module;
@@ -43,19 +46,24 @@ namespace DotNetNuke.Modules.Admin.Modules
         /// <summary>Initializes a new instance of the <see cref="Export"/> class.</summary>
         /// <param name="businessControllerProvider">The business controller provider.</param>
         /// <param name="navigationManager">The navigation manager.</param>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IHostSettings. Scheduled removal in v12.0.0.")]
         public Export(IBusinessControllerProvider businessControllerProvider, INavigationManager navigationManager)
+            : this(businessControllerProvider, navigationManager, null)
+        {
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="Export"/> class.</summary>
+        /// <param name="businessControllerProvider">The business controller provider.</param>
+        /// <param name="navigationManager">The navigation manager.</param>
+        /// <param name="hostSettings">The host settings.</param>
+        public Export(IBusinessControllerProvider businessControllerProvider, INavigationManager navigationManager, IHostSettings hostSettings)
         {
             this.businessControllerProvider = businessControllerProvider ?? this.DependencyProvider.GetRequiredService<IBusinessControllerProvider>();
             this.navigationManager = navigationManager ?? this.DependencyProvider.GetRequiredService<INavigationManager>();
+            this.hostSettings = hostSettings ?? this.DependencyProvider.GetRequiredService<IHostSettings>();
         }
 
-        private ModuleInfo Module
-        {
-            get
-            {
-                return this.module ?? (this.module = ModuleController.Instance.GetModule(this.moduleId, this.TabId, false));
-            }
-        }
+        private ModuleInfo Module => this.module ??= ModuleController.Instance.GetModule(this.moduleId, this.TabId, false);
 
         private string ReturnURL
         {
@@ -65,7 +73,7 @@ namespace DotNetNuke.Modules.Admin.Modules
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
@@ -81,7 +89,7 @@ namespace DotNetNuke.Modules.Admin.Modules
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
@@ -125,7 +133,7 @@ namespace DotNetNuke.Modules.Admin.Modules
 
                 if (folder != null)
                 {
-                    var strFile = "content." + CleanName(this.Module.DesktopModule.ModuleName) + "." + CleanName(this.txtFile.Text) + ".export";
+                    var strFile = $"content.{CleanName(this.Module.DesktopModule.ModuleName)}.{CleanName(this.txtFile.Text)}.export";
                     var strMessage = this.ExportModule(this.moduleId, strFile, folder);
                     if (string.IsNullOrEmpty(strMessage))
                     {
@@ -176,7 +184,7 @@ namespace DotNetNuke.Modules.Admin.Modules
                         if (typeof(IPortable).IsAssignableFrom(businessControllerType))
                         {
                             XmlDocument moduleXml = new XmlDocument { XmlResolver = null };
-                            XmlNode moduleNode = ModuleController.SerializeModule(this.businessControllerProvider, moduleXml, this.Module, true);
+                            XmlNode moduleNode = ModuleController.SerializeModule(this.businessControllerProvider, this.hostSettings, moduleXml, this.Module, true);
 
                             // add attributes to XML document
                             XmlAttribute typeAttribute = moduleXml.CreateAttribute("type");
@@ -204,14 +212,12 @@ namespace DotNetNuke.Modules.Admin.Modules
                                 if (PortalController.Instance.HasSpaceAvailable(this.PortalId, content.Length))
                                 {
                                     // add file to Files table
-                                    using (var fileContent = new MemoryStream(Encoding.UTF8.GetBytes(content)))
-                                    {
-                                        Services.FileSystem.FileManager.Instance.AddFile(folder, fileName, fileContent, true, true, "application/octet-stream");
-                                    }
+                                    using var fileContent = new MemoryStream(Encoding.UTF8.GetBytes(content));
+                                    Services.FileSystem.FileManager.Instance.AddFile(folder, fileName, fileContent, true, true, "application/octet-stream");
                                 }
                                 else
                                 {
-                                    strMessage += "<br>" + string.Format(Localization.GetString("DiskSpaceExceeded"), fileName);
+                                    strMessage += "<br>" + string.Format(CultureInfo.CurrentCulture, Localization.GetString("DiskSpaceExceeded"), fileName);
                                 }
                             }
                             else

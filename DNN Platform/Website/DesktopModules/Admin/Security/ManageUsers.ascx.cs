@@ -6,10 +6,13 @@ namespace DotNetNuke.Modules.Admin.Users
 {
     using System;
     using System.Diagnostics.CodeAnalysis;
+    using System.Globalization;
     using System.Web;
 
     using DotNetNuke.Abstractions;
+    using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Common;
+    using DotNetNuke.Common.Lists;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Modules;
     using DotNetNuke.Entities.Modules.Actions;
@@ -36,6 +39,7 @@ namespace DotNetNuke.Modules.Admin.Users
         private readonly IJavaScriptLibraryHelper javaScript;
 
         /// <summary>Initializes a new instance of the <see cref="ManageUsers"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
         public ManageUsers()
             : this(null, null)
         {
@@ -44,13 +48,25 @@ namespace DotNetNuke.Modules.Admin.Users
         /// <summary>Initializes a new instance of the <see cref="ManageUsers"/> class.</summary>
         /// <param name="navigationManager">The navigation manager.</param>
         /// <param name="javaScript">The JavaScript library helper.</param>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
         public ManageUsers(INavigationManager navigationManager, IJavaScriptLibraryHelper javaScript)
+            : this(navigationManager, javaScript, null, null)
+        {
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="ManageUsers"/> class.</summary>
+        /// <param name="navigationManager">The navigation manager.</param>
+        /// <param name="javaScript">The JavaScript library helper.</param>
+        /// <param name="listController">The list controller.</param>
+        /// <param name="hostSettings">The host settings.</param>
+        public ManageUsers(INavigationManager navigationManager, IJavaScriptLibraryHelper javaScript, ListController listController, IHostSettings hostSettings)
+            : base(listController, hostSettings)
         {
             this.navigationManager = navigationManager ?? this.DependencyProvider.GetRequiredService<INavigationManager>();
             this.javaScript = javaScript ?? this.DependencyProvider.GetRequiredService<IJavaScriptLibraryHelper>();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public ModuleActionCollection ModuleActions
         {
             get
@@ -409,7 +425,7 @@ namespace DotNetNuke.Modules.Admin.Users
                         }
                         else
                         {
-                            this.lblTitle.Text = string.Format(Localization.GetString("UserTitle", this.LocalResourceFile), this.User.Username, this.User.UserID);
+                            this.lblTitle.Text = string.Format(CultureInfo.CurrentCulture, Localization.GetString("UserTitle", this.LocalResourceFile), this.User.Username, this.User.UserID);
                         }
                     }
                 }
@@ -824,11 +840,11 @@ namespace DotNetNuke.Modules.Admin.Users
             string message = Null.NullString;
             if (e.Cancel)
             {
-                message = string.Format(Localization.GetString("UserUnSubscribed", this.LocalResourceFile), e.RoleName);
+                message = string.Format(CultureInfo.CurrentCulture, Localization.GetString("UserUnSubscribed", this.LocalResourceFile), e.RoleName);
             }
             else
             {
-                message = string.Format(Localization.GetString("UserSubscribed", this.LocalResourceFile), e.RoleName);
+                message = string.Format(CultureInfo.CurrentCulture, Localization.GetString("UserSubscribed", this.LocalResourceFile), e.RoleName);
             }
 
             this.AddLocalizedModuleMessage(message, ModuleMessage.ModuleMessageType.GreenSuccess, true);

@@ -4,45 +4,32 @@
 namespace DotNetNuke.Entities.Users.Social
 {
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
 
+    using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Abstractions.Logging;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Users.Social.Data;
     using DotNetNuke.Services.Localization;
-    using DotNetNuke.Services.Log.EventLog;
     using Microsoft.Extensions.DependencyInjection;
 
-    internal class RelationshipControllerImpl : IRelationshipController
+    internal class RelationshipControllerImpl(IDataService dataService, IEventLogger eventLogger, IHostSettings hostSettings, IPortalController portalController, IApplicationStatusInfo appStatus, IPortalGroupController portalGroupController)
+        : IRelationshipController
     {
         internal const string FriendRequest = "FriendRequest";
         internal const string FollowerRequest = "FollowerRequest";
         internal const string FollowBackRequest = "FollowBackRequest";
-        private readonly IDataService dataService;
-        private readonly IEventLogger eventLogger;
+        private readonly IDataService dataService = dataService ?? DataService.Instance;
+        private readonly IEventLogger eventLogger = eventLogger ?? Globals.GetCurrentServiceProvider().GetRequiredService<IEventLogger>();
+        private readonly IHostSettings hostSettings = hostSettings ?? Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>();
+        private readonly IPortalController portalController = portalController ?? Globals.GetCurrentServiceProvider().GetRequiredService<IPortalController>();
+        private readonly IApplicationStatusInfo appStatus = appStatus ?? Globals.GetCurrentServiceProvider().GetRequiredService<IApplicationStatusInfo>();
+        private readonly IPortalGroupController portalGroupController = portalGroupController ?? Globals.GetCurrentServiceProvider().GetRequiredService<IPortalGroupController>();
 
-        /// <summary>Initializes a new instance of the <see cref="RelationshipControllerImpl"/> class.</summary>
-        public RelationshipControllerImpl()
-            : this(DataService.Instance, Globals.GetCurrentServiceProvider().GetRequiredService<IEventLogger>())
-        {
-        }
-
-        /// <summary>Initializes a new instance of the <see cref="RelationshipControllerImpl"/> class.</summary>
-        /// <param name="dataService">An instance of the data service.</param>
-        /// <param name="eventLogger">An instance of the event logger.</param>
-        public RelationshipControllerImpl(IDataService dataService, IEventLogger eventLogger)
-        {
-            // Argument Contract
-            Requires.NotNull("dataService", dataService);
-            Requires.NotNull("eventLogger", eventLogger);
-
-            this.dataService = dataService;
-            this.eventLogger = eventLogger;
-        }
-
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteRelationshipType(RelationshipType relationshipType)
         {
             Requires.NotNull("relationshipType", relationshipType);
@@ -52,6 +39,7 @@ namespace DotNetNuke.Entities.Users.Social
             // log event
             string logContent =
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     Localization.GetString("RelationshipType_Deleted", Localization.GlobalResourceFile),
                     relationshipType.Name,
                     relationshipType.RelationshipTypeId);
@@ -61,7 +49,7 @@ namespace DotNetNuke.Entities.Users.Social
             DataCache.RemoveCache(DataCache.RelationshipTypesCacheKey);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public IList<RelationshipType> GetAllRelationshipTypes()
         {
             var cacheArgs = new CacheItemArgs(
@@ -69,19 +57,18 @@ namespace DotNetNuke.Entities.Users.Social
                 DataCache.RelationshipTypesCacheTimeOut,
                 DataCache.RelationshipTypesCachePriority);
             return CBO.GetCachedObject<IList<RelationshipType>>(
+                this.hostSettings,
                 cacheArgs,
-                c =>
-                                                                CBO.FillCollection<RelationshipType>(
-                                                                    this.dataService.GetAllRelationshipTypes()));
+                _ => CBO.FillCollection<RelationshipType>(this.dataService.GetAllRelationshipTypes()));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public RelationshipType GetRelationshipType(int relationshipTypeId)
         {
             return this.GetAllRelationshipTypes().FirstOrDefault(r => r.RelationshipTypeId == relationshipTypeId);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void SaveRelationshipType(RelationshipType relationshipType)
         {
             Requires.NotNull("relationshipType", relationshipType);
@@ -96,6 +83,7 @@ namespace DotNetNuke.Entities.Users.Social
 
             // log event
             string logContent = string.Format(
+                CultureInfo.CurrentCulture,
                 Localization.GetString(localizationKey, Localization.GlobalResourceFile),
                 relationshipType.Name);
             this.AddLog(logContent);
@@ -104,7 +92,7 @@ namespace DotNetNuke.Entities.Users.Social
             DataCache.RemoveCache(DataCache.RelationshipTypesCacheKey);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteRelationship(Relationship relationship)
         {
             Requires.NotNull("relationship", relationship);
@@ -114,6 +102,7 @@ namespace DotNetNuke.Entities.Users.Social
             // log event
             string logContent =
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     Localization.GetString("Relationship_Deleted", Localization.GlobalResourceFile),
                     relationship.Name,
                     relationship.RelationshipId);
@@ -123,41 +112,39 @@ namespace DotNetNuke.Entities.Users.Social
             ClearRelationshipCache(relationship);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public Relationship GetRelationship(int relationshipId)
         {
             return CBO.FillCollection<Relationship>(this.dataService.GetRelationship(relationshipId)).FirstOrDefault();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public IList<Relationship> GetRelationshipsByUserId(int userId)
         {
             return CBO.FillCollection<Relationship>(this.dataService.GetRelationshipsByUserId(userId));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public IList<Relationship> GetRelationshipsByPortalId(int portalId)
         {
             var pid = portalId;
-            if (PortalController.IsMemberOfPortalGroup(portalId))
+            if (PortalController.IsMemberOfPortalGroup(this.portalController, portalId))
             {
-                pid = PortalController.GetEffectivePortalId(portalId);
+                pid = PortalController.GetEffectivePortalId(this.portalController, this.appStatus, this.portalGroupController, portalId);
             }
 
             var cacheArgs = new CacheItemArgs(
-                string.Format(DataCache.RelationshipByPortalIDCacheKey, pid),
+                string.Format(CultureInfo.InvariantCulture, DataCache.RelationshipByPortalIDCacheKey, pid),
                 DataCache.RelationshipByPortalIDCacheTimeOut,
                 DataCache.RelationshipByPortalIDCachePriority,
                 pid);
             return CBO.GetCachedObject<IList<Relationship>>(
+                this.hostSettings,
                 cacheArgs,
-                c =>
-                                                            CBO.FillCollection<Relationship>(
-                                                                this.dataService.GetRelationshipsByPortalId(
-                                                                    (int)c.ParamList[0])));
+                c => CBO.FillCollection<Relationship>(this.dataService.GetRelationshipsByPortalId((int)c.ParamList[0])));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void SaveRelationship(Relationship relationship)
         {
             Requires.NotNull("relationship", relationship);
@@ -172,6 +159,7 @@ namespace DotNetNuke.Entities.Users.Social
 
             // log event
             string logContent = string.Format(
+                CultureInfo.CurrentCulture,
                 Localization.GetString(localizationKey, Localization.GlobalResourceFile),
                 relationship.Name);
             this.AddLog(logContent);
@@ -180,7 +168,7 @@ namespace DotNetNuke.Entities.Users.Social
             ClearRelationshipCache(relationship);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteUserRelationship(UserRelationship userRelationship)
         {
             Requires.NotNull("userRelationship", userRelationship);
@@ -190,6 +178,7 @@ namespace DotNetNuke.Entities.Users.Social
             // log event
             string logContent =
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     Localization.GetString("UserRelationship_Deleted", Localization.GlobalResourceFile),
                     userRelationship.UserRelationshipId,
                     userRelationship.UserId,
@@ -200,13 +189,13 @@ namespace DotNetNuke.Entities.Users.Social
             ClearUserCache(userRelationship);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public UserRelationship GetUserRelationship(int userRelationshipId)
         {
             return CBO.FillObject<UserRelationship>(this.dataService.GetUserRelationship(userRelationshipId));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public UserRelationship GetUserRelationship(UserInfo user, UserInfo relatedUser, Relationship relationship)
         {
             UserRelationship userRelationship = null;
@@ -223,13 +212,13 @@ namespace DotNetNuke.Entities.Users.Social
             return userRelationship;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public IList<UserRelationship> GetUserRelationships(UserInfo user)
         {
             return CBO.FillCollection<UserRelationship>(this.dataService.GetUserRelationships(user.UserID));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void SaveUserRelationship(UserRelationship userRelationship)
         {
             Requires.NotNull("userRelationship", userRelationship);
@@ -244,6 +233,7 @@ namespace DotNetNuke.Entities.Users.Social
 
             // log event
             string logContent = string.Format(
+                CultureInfo.InvariantCulture,
                 Localization.GetString(localizationKey, Localization.GlobalResourceFile),
                 userRelationship.UserRelationshipId,
                 userRelationship.UserId,
@@ -254,7 +244,7 @@ namespace DotNetNuke.Entities.Users.Social
             ClearUserCache(userRelationship);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteUserRelationshipPreference(UserRelationshipPreference userRelationshipPreference)
         {
             Requires.NotNull("userRelationshipPreference", userRelationshipPreference);
@@ -264,6 +254,7 @@ namespace DotNetNuke.Entities.Users.Social
             // log event
             string logContent =
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     Localization.GetString("UserRelationshipPreference_Deleted", Localization.GlobalResourceFile),
                     userRelationshipPreference.PreferenceId,
                     userRelationshipPreference.UserId,
@@ -271,14 +262,14 @@ namespace DotNetNuke.Entities.Users.Social
             this.AddLog(logContent);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public UserRelationshipPreference GetUserRelationshipPreference(int preferenceId)
         {
             return
                 CBO.FillObject<UserRelationshipPreference>(this.dataService.GetUserRelationshipPreferenceById(preferenceId));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public UserRelationshipPreference GetUserRelationshipPreference(int userId, int relationshipId)
         {
             return
@@ -287,7 +278,7 @@ namespace DotNetNuke.Entities.Users.Social
                     relationshipId));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void SaveUserRelationshipPreference(UserRelationshipPreference userRelationshipPreference)
         {
             Requires.NotNull("userRelationshipPreference", userRelationshipPreference);
@@ -303,6 +294,7 @@ namespace DotNetNuke.Entities.Users.Social
 
             // log event
             string logContent = string.Format(
+                CultureInfo.InvariantCulture,
                 Localization.GetString(localizationKey, Localization.GlobalResourceFile),
                 userRelationshipPreference.PreferenceId,
                 userRelationshipPreference.UserId,
@@ -513,7 +505,7 @@ namespace DotNetNuke.Entities.Users.Social
                 this.GetFriendsRelationshipByPortal(initiatingUser.PortalID));
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void CreateDefaultRelationshipsForPortal(int portalId)
         {
             // create default Friend Relationship
@@ -522,8 +514,8 @@ namespace DotNetNuke.Entities.Users.Social
                 var friendRelationship = new Relationship
                 {
                     RelationshipId = Null.NullInteger,
-                    Name = DefaultRelationshipTypes.Friends.ToString(),
-                    Description = DefaultRelationshipTypes.Friends.ToString(),
+                    Name = nameof(DefaultRelationshipTypes.Friends),
+                    Description = nameof(DefaultRelationshipTypes.Friends),
                     PortalId = portalId,
                     UserId = Null.NullInteger,
                     DefaultResponse = RelationshipStatus.None,
@@ -540,8 +532,8 @@ namespace DotNetNuke.Entities.Users.Social
                 var followerRelationship = new Relationship
                 {
                     RelationshipId = Null.NullInteger,
-                    Name = DefaultRelationshipTypes.Followers.ToString(),
-                    Description = DefaultRelationshipTypes.Followers.ToString(),
+                    Name = nameof(DefaultRelationshipTypes.Followers),
+                    Description = nameof(DefaultRelationshipTypes.Followers),
                     PortalId = portalId,
                     UserId = Null.NullInteger,
                     DefaultResponse = RelationshipStatus.Accepted,
@@ -553,13 +545,13 @@ namespace DotNetNuke.Entities.Users.Social
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public Relationship GetFriendsRelationshipByPortal(int portalId)
         {
             return this.GetRelationshipsByPortalId(portalId).FirstOrDefault(re => re.RelationshipTypeId == (int)DefaultRelationshipTypes.Friends);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public Relationship GetFollowersRelationshipByPortal(int portalId)
         {
             return this.GetRelationshipsByPortalId(portalId).FirstOrDefault(re => re.RelationshipTypeId == (int)DefaultRelationshipTypes.Followers);
@@ -569,15 +561,14 @@ namespace DotNetNuke.Entities.Users.Social
         {
             if (relationship.UserId == Null.NullInteger)
             {
-                DataCache.RemoveCache(string.Format(DataCache.RelationshipByPortalIDCacheKey, relationship.PortalId));
+                DataCache.RemoveCache(string.Format(CultureInfo.InvariantCulture, DataCache.RelationshipByPortalIDCacheKey, relationship.PortalId));
             }
         }
 
         private static void ClearUserCache(UserRelationship userRelationship)
         {
             // Get Portal
-            PortalSettings settings = PortalController.Instance.GetCurrentPortalSettings();
-
+            var settings = PortalController.Instance.GetCurrentSettings();
             if (settings != null)
             {
                 // Get User

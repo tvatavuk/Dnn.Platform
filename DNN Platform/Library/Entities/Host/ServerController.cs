@@ -5,20 +5,25 @@ namespace DotNetNuke.Entities.Host
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
-    using System.Runtime.CompilerServices;
     using System.Web.Caching;
 
+    using DotNetNuke.Abstractions.Application;
+    using DotNetNuke.Abstractions.Logging;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Data;
     using DotNetNuke.Entities.Controllers;
     using DotNetNuke.Framework;
     using DotNetNuke.Instrumentation;
+    using DotNetNuke.Internal.SourceGenerators;
     using DotNetNuke.Services.Log.EventLog;
-    using DotNetNuke.UI.WebControls;
 
-    public class ServerController
+    using Microsoft.Extensions.DependencyInjection;
+
+    /// <summary>Controller for web servers.</summary>
+    public partial class ServerController
     {
         public const string DefaultUrlAdapter = "DotNetNuke.Entities.Host.ServerWebRequestAdapter, DotNetNuke";
 
@@ -108,10 +113,21 @@ namespace DotNetNuke.Entities.Host
             return serverName;
         }
 
-        public static List<ServerInfo> GetServers()
+        /// <summary>Gets the servers.</summary>
+        /// <returns>A list of servers.</returns>
+        [DnnDeprecated(10, 2, 4, "Use overload taking IHostSettings")]
+        public static partial List<ServerInfo> GetServers()
+            => GetServers(Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>());
+
+        /// <summary>Gets the servers.</summary>
+        /// <param name="hostSettings">The host settings.</param>
+        /// <returns>A list of servers.</returns>
+        public static List<ServerInfo> GetServers(IHostSettings hostSettings)
         {
-            var servers = CBO.GetCachedObject<List<ServerInfo>>(new CacheItemArgs(CacheKey, CacheTimeout, CachePriority), GetServersCallBack);
-            return servers;
+            return CBO.GetCachedObject<List<ServerInfo>>(
+                hostSettings,
+                new CacheItemArgs(CacheKey, CacheTimeout, CachePriority),
+                GetServersCallBack);
         }
 
         public static void UpdateServer(ServerInfo server)
@@ -152,9 +168,9 @@ namespace DotNetNuke.Entities.Host
             var log = new LogInfo();
             log.AddProperty(existServer != null ? "Server Updated" : "Add New Server", server.ServerName);
             log.AddProperty("IISAppName", server.IISAppName);
-            log.AddProperty("Last Activity Date", server.LastActivityDate.ToString());
-            log.LogTypeKey = existServer != null ? EventLogController.EventLogType.WEBSERVER_UPDATED.ToString()
-                                        : EventLogController.EventLogType.WEBSERVER_CREATED.ToString();
+            log.AddProperty("Last Activity Date", server.LastActivityDate.ToString(CultureInfo.InvariantCulture));
+            log.LogTypeKey = existServer != null ? nameof(EventLogType.WEBSERVER_UPDATED)
+                                        : nameof(EventLogType.WEBSERVER_CREATED);
             LogController.Instance.AddLog(log);
         }
 

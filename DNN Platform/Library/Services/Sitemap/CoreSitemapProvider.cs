@@ -8,6 +8,7 @@ namespace DotNetNuke.Services.Sitemap
     using System.Globalization;
     using System.Linq;
 
+    using DotNetNuke.Abstractions.Portals;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Internal;
     using DotNetNuke.Common.Utilities;
@@ -40,7 +41,7 @@ namespace DotNetNuke.Services.Sitemap
             var currentLanguage = ps.CultureCode;
             if (string.IsNullOrEmpty(currentLanguage))
             {
-                currentLanguage = Localization.GetPageLocale(ps).Name;
+                currentLanguage = Localization.GetPageLocale((IPortalSettings)ps).Name;
             }
 
             var languagePublished = LocaleController.Instance.GetLocale(ps.PortalId, currentLanguage).IsPublished;
@@ -64,7 +65,7 @@ namespace DotNetNuke.Services.Sitemap
                             }
                             catch (Exception)
                             {
-                                Logger.ErrorFormat("Error has occurred getting PageUrl for {0}", tab.TabName);
+                                Logger.ErrorFormat(CultureInfo.InvariantCulture, "Error has occurred getting PageUrl for {0}", tab.TabName);
                             }
                         }
                     }
@@ -97,7 +98,7 @@ namespace DotNetNuke.Services.Sitemap
                     if (!string.IsNullOrEmpty(role))
                     {
                         // Deny permission
-                        if (role.StartsWith("!"))
+                        if (role.StartsWith("!", StringComparison.Ordinal))
                         {
                             string denyRole = role.Replace("!", string.Empty);
                             if (denyRole is Globals.glbRoleUnauthUserName or Globals.glbRoleAllUsersName)
@@ -110,7 +111,7 @@ namespace DotNetNuke.Services.Sitemap
                         }
                         else
                         {
-                            if (role == Globals.glbRoleUnauthUserName || role == Globals.glbRoleAllUsersName)
+                            if (role is Globals.glbRoleUnauthUserName or Globals.glbRoleAllUsersName)
                             {
                                 hasPublicRole = true;
                                 break;
@@ -157,12 +158,13 @@ namespace DotNetNuke.Services.Sitemap
         /// <summary>Return the sitemap url node for the page.</summary>
         /// <param name="objTab">The page being indexed.</param>
         /// <param name="language">Culture code to use in the URL.</param>
+        /// <param name="ps">The portal settings.</param>
         /// <returns>A SitemapUrl object for the current page.</returns>
         private SitemapUrl GetPageUrl(TabInfo objTab, string language, PortalSettings ps)
         {
             var pageUrl = new SitemapUrl();
             var url = TestableGlobals.Instance.NavigateURL(objTab.TabID, objTab.IsSuperTab, ps, string.Empty, language);
-            if ((ps.SSLSetup == Abstractions.Security.SiteSslSetup.On || ps.SSLEnforced || (objTab.IsSecure && ps.SSLEnabled)) && url.StartsWith("http://"))
+            if ((ps.SSLSetup == Abstractions.Security.SiteSslSetup.On || ps.SSLEnforced || (objTab.IsSecure && ps.SSLEnabled)) && url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
             {
                 url = "https://" + url.Substring("http://".Length);
             }

@@ -6,6 +6,7 @@ namespace Dnn.ExportImport.Components.Common
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Reflection;
     using System.Text;
@@ -15,12 +16,15 @@ namespace Dnn.ExportImport.Components.Common
     using Dnn.ExportImport.Components.Entities;
     using Dnn.ExportImport.Components.Providers;
     using Dnn.ExportImport.Components.Services;
+
+    using DotNetNuke.Abstractions.Application;
+    using DotNetNuke.Abstractions.Security.Permissions;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Modules.Definitions;
+    using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Profile;
     using DotNetNuke.Entities.Users;
-    using DotNetNuke.Framework.Reflections;
     using DotNetNuke.Instrumentation;
     using DotNetNuke.Internal.SourceGenerators;
 
@@ -32,17 +36,17 @@ namespace Dnn.ExportImport.Components.Common
     public static partial class Util
     {
         private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(Util));
-        private static int noRole = Convert.ToInt32(Globals.glbRoleNothing);
+        private static int noRole = Convert.ToInt32(Globals.glbRoleNothing, CultureInfo.InvariantCulture);
 
-        /// <summary>Checks if a string is either null or empty ("").</summary>
+        /// <summary>Checks if a string is either null or empty (<c>""</c>).</summary>
         /// <param name="s">The string to check.</param>
         /// <returns>A value indicating whether the string is null or empty.</returns>
         [DnnDeprecated(9, 8, 0, "Use string.IsNullOrEmpty from System.String instead")]
         public static partial bool IsNullOrEmpty(this string s) => string.IsNullOrEmpty(s);
 
-        /// <summary>Checks if a string is either null or contains only whitespace (" ").</summary>
+        /// <summary>Checks if a string is either null or contains only whitespace (<c>" "</c>).</summary>
         /// <param name="s">The string to check.</param>
-        /// <returns>A value indicating whether the string is null or contains only whtespace.</returns>
+        /// <returns>A value indicating whether the string is null or contains only whitespace.</returns>
         [DnnDeprecated(9, 8, 0, "Use string.IsNullOrWhiteSpace from System.String instead")]
         public static partial bool IsNullOrWhiteSpace(this string s) => string.IsNullOrWhiteSpace(s);
 
@@ -68,10 +72,10 @@ namespace Dnn.ExportImport.Components.Common
             return serviceProvider.GetServices<BasePortableService>();
         }
 
-        /// <summary>Formats a size to a human readable format.</summary>
+        /// <summary>Formats a size to a human-readable format.</summary>
         /// <param name="bytes">The amount of bytes to represent.</param>
         /// <param name="decimals">How many decimal places to use in the resulting string.</param>
-        /// <returns>A human readable size format, for instance 1024 would return 1 KB.</returns>
+        /// <returns>A human-readable size format, for instance 1024 would return 1 KB.</returns>
         public static string FormatSize(long bytes, byte decimals = 1)
         {
             const long kb = 1024;
@@ -85,33 +89,33 @@ namespace Dnn.ExportImport.Components.Common
 
             if (bytes < mb)
             {
-                return (1.0 * bytes / kb).ToString("F" + decimals) + " KB";
+                return (1.0 * bytes / kb).ToString("F" + decimals, CultureInfo.CurrentCulture) + " KB";
             }
 
             if (bytes < gb)
             {
-                return (1.0 * bytes / mb).ToString("F" + decimals) + " MB";
+                return (1.0 * bytes / mb).ToString("F" + decimals, CultureInfo.CurrentCulture) + " MB";
             }
 
-            return (1.0 * bytes / gb).ToString("F" + decimals) + " GB";
+            return (1.0 * bytes / gb).ToString("F" + decimals, CultureInfo.CurrentCulture) + " GB";
         }
 
         /// <summary>Gets the export/import job cache key.</summary>
         /// <param name="job">The job to generate the key for.</param>
-        /// <returns>A string representing the cacke key.</returns>
+        /// <returns>A string representing the cache key.</returns>
         public static string GetExpImpJobCacheKey(ExportImportJob job)
         {
-            return string.Join(":", "ExpImpKey", job.PortalId.ToString(), job.JobId.ToString());
+            return string.Join(":", "ExpImpKey", job.PortalId.ToString(CultureInfo.InvariantCulture), job.JobId.ToString(CultureInfo.InvariantCulture));
         }
 
         /// <summary>Get the id of a user for populating audit control values.</summary>
         /// <param name="importJob">A reference to the import job.</param>
         /// <param name="exportedUserId">The user id for the user that created the export.</param>
-        /// <param name="exportUsername">The user name for the user that creted the export.</param>
+        /// <param name="exportUsername">The username for the user that created the export.</param>
         /// <returns>-1 if not found, 1 if the user is HOST, the user id if found on the imported site.</returns>
         public static int GetUserIdByName(ExportImportJob importJob, int? exportedUserId, string exportUsername)
         {
-            if (!exportedUserId.HasValue || exportedUserId <= 0)
+            if (exportedUserId is null or <= 0)
             {
                 return -1;
             }
@@ -151,9 +155,9 @@ namespace Dnn.ExportImport.Components.Common
             return roleId == noRole ? null : (int?)roleId;
         }
 
-        /// <summary>Gets a module definition id by it's friendly name.</summary>
-        /// <param name="friendlyName">The module definition frienly name.</param>
-        /// <returns>The found module definition id or null.</returns>
+        /// <summary>Gets a module definition ID by its friendly name.</summary>
+        /// <param name="friendlyName">The module definition friendly name.</param>
+        /// <returns>The found module definition ID or null.</returns>
         public static int? GeModuleDefIdByFriendltName(string friendlyName)
         {
             if (string.IsNullOrEmpty(friendlyName))
@@ -165,7 +169,7 @@ namespace Dnn.ExportImport.Components.Common
             return moduleDefInfo?.ModuleDefID;
         }
 
-        /// <summary>Gets the id of a permission by it's permission name.</summary>
+        /// <summary>Gets the ID of a permission by its permission name.</summary>
         /// <param name="permissionCode">The code of the permission.</param>
         /// <param name="permissionKey">The key of the permission.</param>
         /// <param name="permissionName">The name of the permission.</param>
@@ -179,33 +183,53 @@ namespace Dnn.ExportImport.Components.Common
                 return null;
             }
 
-            var permission = EntitiesController.Instance.GetPermissionInfo(permissionCode, permissionKey, permissionName);
-            return permission?.PermissionID;
+            IPermissionDefinitionInfo permission = EntitiesController.Instance.GetPermissionInfo(permissionCode, permissionKey, permissionName);
+            return permission?.PermissionId;
         }
 
-        /// <summary>Gets the id of a profile property from an export.</summary>
-        /// <param name="portalId">The id of the portal (site).</param>
+        /// <summary>Gets the ID of a profile property from an export.</summary>
+        /// <param name="portalId">The ID of the portal (site).</param>
         /// <param name="exportedProfilePropertyId">The exported profile property.</param>
         /// <param name="exportProfilePropertyname">The name of the exported profile property.</param>
-        /// <returns>The id of the profile property or null if not found.</returns>
-        public static int? GetProfilePropertyId(
-            int portalId,
-            int? exportedProfilePropertyId,
-            string exportProfilePropertyname)
+        /// <returns>The ID of the profile property or <see langword="null"/> if not found.</returns>
+        [DnnDeprecated(10, 2, 2, "Please use overload with IHostSettings")]
+        public static partial int? GetProfilePropertyId(int portalId, int? exportedProfilePropertyId, string exportProfilePropertyname)
+            => GetProfilePropertyId(Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>(), portalId, exportedProfilePropertyId, exportProfilePropertyname);
+
+        /// <summary>Gets the ID of a profile property from an export.</summary>
+        /// <param name="hostSettings">The host settings.</param>
+        /// <param name="portalId">The ID of the portal (site).</param>
+        /// <param name="exportedProfilePropertyId">The exported profile property.</param>
+        /// <param name="exportProfilePropertyname">The name of the exported profile property.</param>
+        /// <returns>The ID of the profile property or <see langword="null"/> if not found.</returns>
+        [DnnDeprecated(10, 2, 4, "Please use overload with IPortalController")]
+        public static partial int? GetProfilePropertyId(IHostSettings hostSettings, int portalId, int? exportedProfilePropertyId, string exportProfilePropertyname)
+            => GetProfilePropertyId(hostSettings, null, null, null, portalId, exportedProfilePropertyId, exportProfilePropertyname);
+
+        /// <summary>Gets the ID of a profile property from an export.</summary>
+        /// <param name="hostSettings">The host settings.</param>
+        /// <param name="portalController">The portal controller.</param>
+        /// <param name="appStatus">The application status.</param>
+        /// <param name="portalGroupController">The portal group controller.</param>
+        /// <param name="portalId">The ID of the portal (site).</param>
+        /// <param name="exportedProfilePropertyId">The exported profile property.</param>
+        /// <param name="exportProfilePropertyName">The name of the exported profile property.</param>
+        /// <returns>The ID of the profile property or <see langword="null"/> if not found.</returns>
+        public static int? GetProfilePropertyId(IHostSettings hostSettings, IPortalController portalController, IApplicationStatusInfo appStatus, IPortalGroupController portalGroupController, int portalId, int? exportedProfilePropertyId, string exportProfilePropertyName)
         {
-            if (!exportedProfilePropertyId.HasValue || exportedProfilePropertyId <= 0)
+            if (exportedProfilePropertyId is null or <= 0)
             {
                 return -1;
             }
 
-            var property = ProfileController.GetPropertyDefinitionByName(portalId, exportProfilePropertyname);
+            var property = ProfileController.GetPropertyDefinitionByName(hostSettings, portalController, appStatus, portalGroupController, portalId, exportProfilePropertyName);
             return property?.PropertyDefinitionId;
         }
 
         /// <summary>Calculates the total number of pages.</summary>
         /// <param name="totalRecords">The total amount of records.</param>
         /// <param name="pageSize">The number of items on a page.</param>
-        /// <returns>A value indicating the total amount of pages required to containe the amount of items.</returns>
+        /// <returns>A value indicating the total amount of pages required to contain the amount of items.</returns>
         public static int CalculateTotalPages(int totalRecords, int pageSize)
         {
             return totalRecords % pageSize == 0 ? totalRecords / pageSize : (totalRecords / pageSize) + 1;
@@ -336,7 +360,7 @@ namespace Dnn.ExportImport.Components.Common
         /// <returns>A human readable representation of the date and time.</returns>
         public static string GetDateTimeString(DateTime? dateTime)
         {
-            return dateTime?.ToString(Thread.CurrentThread.CurrentUICulture) ?? string.Empty;
+            return dateTime?.ToString(Thread.CurrentThread.CurrentCulture) ?? string.Empty;
         }
 
         /// <summary>Gets a string representation of a number formatted for the current thread culture.</summary>
@@ -344,7 +368,7 @@ namespace Dnn.ExportImport.Components.Common
         /// <returns>A string representing a number in the current thread culture format.</returns>
         public static string FormatNumber(int? number)
         {
-            return number?.ToString("n0", Thread.CurrentThread.CurrentUICulture);
+            return number?.ToString("n0", Thread.CurrentThread.CurrentCulture);
         }
     }
 }

@@ -4,18 +4,21 @@
 namespace DotNetNuke.Build
 {
     using System;
+    using System.Globalization;
     using System.IO;
 
     using Cake.Common;
+    using Cake.Common.Build;
     using Cake.Common.Diagnostics;
     using Cake.Common.IO;
     using Cake.Common.IO.Paths;
     using Cake.Common.Tools.GitVersion;
     using Cake.Core;
+    using Cake.Core.Diagnostics;
     using Cake.Frosting;
     using Cake.Json;
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public class Context : FrostingContext
     {
         /// <summary>Initializes a new instance of the <see cref="Context"/> class.</summary>
@@ -62,7 +65,11 @@ namespace DotNetNuke.Build
                 this.Settings = LoadSettings(context, settingsFile);
                 this.WriteSettings(context, settingsFile);
 
-                this.BuildId = context.EnvironmentVariable("BUILD_BUILDID") ?? "0";
+                this.BuildId = context.AzurePipelines().IsRunningOnAzurePipelines
+                    ? context.AzurePipelines().Environment.Build.Id.ToString(CultureInfo.InvariantCulture)
+                    : context.GitHubActions().IsRunningOnGitHubActions
+                        ? context.GitHubActions().Environment.Workflow.RunId
+                        : "0";
                 context.Information($"BuildId: {this.BuildId}");
                 this.BuildNumber = string.Empty;
                 this.ProductVersion = string.Empty;
@@ -160,18 +167,18 @@ namespace DotNetNuke.Build
         {
             if (File.Exists(settingsFile))
             {
-                context.Information(log => log($"Loading settings from {Path.GetFullPath(settingsFile)}"));
+                context.Information((FormattableLogActionEntry log) => log($"Loading settings from {Path.GetFullPath(settingsFile)}"));
                 return context.DeserializeJsonFromFile<LocalSettings>(settingsFile);
             }
 
-            context.Information(log => log($"Did not find settings file {Path.GetFullPath(settingsFile)}"));
+            context.Information((FormattableLogActionEntry log) => log($"Did not find settings file {Path.GetFullPath(settingsFile)}"));
             return new LocalSettings();
         }
 
         private void WriteSettings(ICakeContext context, string settingsFile)
         {
             context.SerializeJsonToPrettyFile(settingsFile, this.Settings);
-            context.Information(log => log($"Saved settings to {Path.GetFullPath(settingsFile)}"));
+            context.Information((FormattableLogActionEntry log) => log($"Saved settings to {Path.GetFullPath(settingsFile)}"));
             context.Debug(log => log("{0}", $"Settings: {context.SerializeJson(this.Settings)}"));
         }
     }

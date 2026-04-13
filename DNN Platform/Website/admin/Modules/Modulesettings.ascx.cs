@@ -8,6 +8,7 @@ namespace DotNetNuke.Modules.Admin.Modules
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.Globalization;
     using System.Linq;
     using System.Text;
     using System.Threading;
@@ -17,7 +18,6 @@ namespace DotNetNuke.Modules.Admin.Modules
     using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Abstractions.Portals;
     using DotNetNuke.Common.Utilities;
-    using DotNetNuke.Entities.Host;
     using DotNetNuke.Entities.Modules;
     using DotNetNuke.Entities.Modules.Definitions;
     using DotNetNuke.Entities.Portals;
@@ -45,14 +45,16 @@ namespace DotNetNuke.Modules.Admin.Modules
         private readonly IModuleControlPipeline moduleControlPipeline;
         private readonly IHostSettings hostSettings;
         private readonly IJavaScriptLibraryHelper javaScript;
+        private readonly IApplicationStatusInfo appStatus;
 
         private int moduleId = -1;
         private Control control;
         private ModuleInfo module;
 
         /// <summary>Initializes a new instance of the <see cref="ModuleSettingsPage"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IApplicationStatusInfo. Scheduled removal in v12.0.0.")]
         public ModuleSettingsPage()
-            : this(null, null, null, null, null)
+            : this(null, null, null, null, null, null)
         {
         }
 
@@ -62,13 +64,27 @@ namespace DotNetNuke.Modules.Admin.Modules
         /// <param name="moduleControlPipeline">The module control pipeline.</param>
         /// <param name="hostSettings">The host settings.</param>
         /// <param name="javaScript">The JavaScript library helper.</param>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IApplicationStatusInfo. Scheduled removal in v12.0.0.")]
         public ModuleSettingsPage(INavigationManager navigationManager, IPortalAliasService portalAliasService, IModuleControlPipeline moduleControlPipeline, IHostSettings hostSettings, IJavaScriptLibraryHelper javaScript)
+            : this(navigationManager, portalAliasService, moduleControlPipeline, hostSettings, javaScript, null)
+        {
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="ModuleSettingsPage"/> class.</summary>
+        /// <param name="navigationManager">The navigation manager.</param>
+        /// <param name="portalAliasService">The portal alias service.</param>
+        /// <param name="moduleControlPipeline">The module control pipeline.</param>
+        /// <param name="hostSettings">The host settings.</param>
+        /// <param name="javaScript">The JavaScript library helper.</param>
+        /// <param name="appStatus">The application status.</param>
+        public ModuleSettingsPage(INavigationManager navigationManager, IPortalAliasService portalAliasService, IModuleControlPipeline moduleControlPipeline, IHostSettings hostSettings, IJavaScriptLibraryHelper javaScript, IApplicationStatusInfo appStatus)
         {
             this.navigationManager = navigationManager ?? this.DependencyProvider.GetRequiredService<INavigationManager>();
             this.portalAliasService = portalAliasService ?? this.DependencyProvider.GetRequiredService<IPortalAliasService>();
             this.moduleControlPipeline = moduleControlPipeline ?? this.DependencyProvider.GetRequiredService<IModuleControlPipeline>();
             this.hostSettings = hostSettings ?? this.DependencyProvider.GetRequiredService<IHostSettings>();
             this.javaScript = javaScript ?? this.DependencyProvider.GetRequiredService<IJavaScriptLibraryHelper>();
+            this.appStatus = appStatus ?? this.DependencyProvider.GetRequiredService<IApplicationStatusInfo>();
         }
 
         private bool HideDeleteButton => this.Request.QueryString["HideDelete"] == "true";
@@ -77,32 +93,16 @@ namespace DotNetNuke.Modules.Admin.Modules
 
         private bool DoNotRedirectOnUpdate => this.Request.QueryString["NoRedirectOnUpdate"] == "true";
 
-        private ModuleInfo Module
-        {
-            get { return this.module ?? (this.module = ModuleController.Instance.GetModule(this.moduleId, this.TabId, false)); }
-        }
+        private ModuleInfo Module => this.module ??= ModuleController.Instance.GetModule(this.moduleId, this.TabId, false);
 
-        private ISettingsControl SettingsControl
-        {
-            get
-            {
-                return this.control as ISettingsControl;
-            }
-        }
+        private ISettingsControl SettingsControl => this.control as ISettingsControl;
 
-        private string ReturnURL
-        {
-            get
-            {
-                return UrlUtils.ValidReturnUrl(this.Request.Params["ReturnURL"]) ?? this.navigationManager.NavigateURL();
-            }
-        }
+        private string ReturnURL => UrlUtils.ValidReturnUrl(this.Request.Params["ReturnURL"]) ?? this.navigationManager.NavigateURL();
 
         protected string GetInstalledOnLink(object dataItem)
         {
             var returnValue = new StringBuilder();
-            var tab = dataItem as TabInfo;
-            if (tab != null)
+            if (dataItem is TabInfo tab)
             {
                 var index = 0;
                 TabController.Instance.PopulateBreadCrumbs(ref tab);
@@ -129,7 +129,7 @@ namespace DotNetNuke.Modules.Admin.Modules
                     }
                     else
                     {
-                        returnValue.AppendFormat("{0}", t.LocalizedTabName);
+                        returnValue.Append(t.LocalizedTabName);
                     }
 
                     index = index + 1;
@@ -142,8 +142,7 @@ namespace DotNetNuke.Modules.Admin.Modules
         protected string GetInstalledOnSite(object dataItem)
         {
             string returnValue = string.Empty;
-            var tab = dataItem as TabInfo;
-            if (tab != null)
+            if (dataItem is TabInfo tab)
             {
                 var portal = PortalController.Instance.GetPortal(tab.PortalID);
                 if (portal != null)
@@ -160,7 +159,7 @@ namespace DotNetNuke.Modules.Admin.Modules
             return this.ModuleContext.Configuration.IsShared && this.ModuleContext.Configuration.IsShareableViewOnly;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
@@ -203,14 +202,13 @@ namespace DotNetNuke.Modules.Admin.Modules
                     this.TabModuleId = this.Module.TabModuleID;
 
                     // get Settings Control
-                    ModuleControlInfo moduleControlInfo = ModuleControlController.GetModuleControlByControlKey("Settings", this.Module.ModuleDefID);
+                    ModuleControlInfo moduleControlInfo = ModuleControlController.GetModuleControlByControlKey(this.hostSettings, "Settings", this.Module.ModuleDefID);
 
                     if (moduleControlInfo != null)
                     {
                         this.control = this.moduleControlPipeline.LoadSettingsControl(this.Page, this.Module, moduleControlInfo.ControlSrc);
 
-                        var settingsControl = this.control as ISettingsControl;
-                        if (settingsControl != null)
+                        if (this.control is ISettingsControl settingsControl)
                         {
                             this.hlSpecificSettings.Text = Localization.GetString(
                                 "ControlTitle_settings",
@@ -234,7 +232,7 @@ namespace DotNetNuke.Modules.Admin.Modules
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
@@ -257,7 +255,7 @@ namespace DotNetNuke.Modules.Admin.Modules
 
                     this.BindModulePages();
 
-                    this.cboTab.DataSource = TabController.GetPortalTabs(this.PortalId, -1, false, Null.NullString, true, false, true, false, true);
+                    this.cboTab.DataSource = TabController.GetPortalTabs(this.hostSettings, this.appStatus, this.PortalId, -1, false, Null.NullString, true, false, true, false, true);
                     this.cboTab.DataBind();
 
                     // if tab is a  host tab, then add current tab
@@ -485,13 +483,8 @@ namespace DotNetNuke.Modules.Admin.Modules
                     this.Module.Header = this.txtHeader.Text;
                     this.Module.Footer = this.txtFooter.Text;
 
-                    this.Module.StartDate = this.startDatePicker.SelectedDate != null
-                                        ? this.startDatePicker.SelectedDate.Value
-                                        : Null.NullDate;
-
-                    this.Module.EndDate = this.endDatePicker.SelectedDate != null
-                                        ? this.endDatePicker.SelectedDate.Value
-                                        : Null.NullDate;
+                    this.Module.StartDate = DateTime.TryParseExact(this.startDatePicker.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var startDate) ? startDate : Null.NullDate;
+                    this.Module.EndDate = DateTime.TryParseExact(this.endDatePicker.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var endDate) ? endDate : Null.NullDate;
 
                     this.Module.ContainerSrc = this.moduleContainerCombo.SelectedValue;
                     this.Module.ModulePermissions.Clear();
@@ -561,7 +554,7 @@ namespace DotNetNuke.Modules.Admin.Modules
                     // Check if Module is to be Added/Removed from all Tabs
                     if (allTabsChanged)
                     {
-                        var listTabs = TabController.GetPortalTabs(this.PortalSettings.PortalId, Null.NullInteger, false, true);
+                        var listTabs = TabController.GetPortalTabs(this.hostSettings, this.appStatus, this.PortalSettings.PortalId, Null.NullInteger, false, true);
                         if (this.chkAllTabs.Checked)
                         {
                             if (!this.chkNewTabs.Checked)
@@ -618,9 +611,9 @@ namespace DotNetNuke.Modules.Admin.Modules
         {
             if (this.Module != null)
             {
-                var desktopModule = DesktopModuleController.GetDesktopModule(this.Module.DesktopModuleID, this.PortalId);
-                this.dgPermissions.ResourceFile = Globals.ApplicationPath + "/DesktopModules/" + desktopModule.FolderName + "/" + Localization.LocalResourceDirectory + "/" +
-                                             Localization.LocalSharedResourceFile;
+                var desktopModule = DesktopModuleController.GetDesktopModule(this.hostSettings, this.Module.DesktopModuleID, this.PortalId);
+                this.dgPermissions.ResourceFile =
+                    $"{Globals.ApplicationPath}/DesktopModules/{desktopModule.FolderName}/{Localization.LocalResourceDirectory}/{Localization.LocalSharedResourceFile}";
                 if (!this.Module.IsShared)
                 {
                     this.chkInheritPermissions.Checked = this.Module.InheritViewPermissions;
@@ -671,12 +664,12 @@ namespace DotNetNuke.Modules.Admin.Modules
 
                 if (!Null.IsNull(this.Module.StartDate))
                 {
-                    this.startDatePicker.SelectedDate = this.Module.StartDate;
+                    this.startDatePicker.Text = this.Module.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                 }
 
-                if (!Null.IsNull(this.Module.EndDate) && this.Module.EndDate <= this.endDatePicker.MaxDate)
+                if (!Null.IsNull(this.Module.EndDate) && this.Module.EndDate <= DateTime.MaxValue)
                 {
-                    this.endDatePicker.SelectedDate = this.Module.EndDate;
+                    this.endDatePicker.Text = this.Module.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                 }
 
                 this.BindContainers();

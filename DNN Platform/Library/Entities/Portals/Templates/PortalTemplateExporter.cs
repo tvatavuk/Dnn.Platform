@@ -16,6 +16,7 @@ namespace DotNetNuke.Entities.Portals.Templates
     using System.Web;
     using System.Xml;
 
+    using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Abstractions.Modules;
     using DotNetNuke.Abstractions.Portals;
     using DotNetNuke.Common;
@@ -30,12 +31,20 @@ namespace DotNetNuke.Entities.Portals.Templates
     using DotNetNuke.Services.FileSystem;
     using DotNetNuke.Services.Localization;
 
-    internal class PortalTemplateExporter
+    internal class PortalTemplateExporter(IBusinessControllerProvider businessControllerProvider, ListController listController, IPortalController portalController, IHostSettings hostSettings, RoleProvider roleProvider, IApplicationStatusInfo appStatus, IPortalGroupController portalGroupController)
     {
+        private readonly IBusinessControllerProvider businessControllerProvider = businessControllerProvider;
+        private readonly ListController listController = listController;
+        private readonly IPortalController portalController = portalController;
+        private readonly IHostSettings hostSettings = hostSettings;
+        private readonly RoleProvider roleProvider = roleProvider;
+        private readonly IApplicationStatusInfo appStatus = appStatus;
+        private readonly IPortalGroupController portalGroupController = portalGroupController;
+
         private static string LocalResourcesFile => Path.Combine("~/DesktopModules/admin/Dnn.PersonaBar/Modules/Dnn.Sites/App_LocalResources/Sites.resx");
 
         [SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic", Justification = "Breaking change")]
-        internal (bool Success, string Message) ExportPortalTemplate(IBusinessControllerProvider businessControllerProvider, int portalId, string fileName, string description, bool isMultiLanguage, IEnumerable<string> locales, string localizationCulture, IEnumerable<int> exportTabIds, bool includeContent, bool includeFiles, bool includeModules, bool includeProfile, bool includeRoles)
+        internal (bool Success, string Message) ExportPortalTemplate(int portalId, string fileName, string description, bool isMultiLanguage, IEnumerable<string> locales, string localizationCulture, IEnumerable<int> exportTabIds, bool includeContent, bool includeFiles, bool includeModules, bool includeProfile, bool includeRoles)
         {
             if (!exportTabIds.Any())
             {
@@ -76,7 +85,7 @@ namespace DotNetNuke.Entities.Portals.Templates
                 if (includeProfile)
                 {
                     // Serialize Profile Definitions
-                    SerializeProfileDefinitions(writer, portal);
+                    this.SerializeProfileDefinitions(writer, portal);
                 }
 
                 if (includeModules)
@@ -88,11 +97,11 @@ namespace DotNetNuke.Entities.Portals.Templates
                 if (includeRoles)
                 {
                     // Serialize Roles
-                    RoleController.SerializeRoleGroups(writer, portalId);
+                    RoleController.SerializeRoleGroups(this.roleProvider, writer, portalId);
                 }
 
                 // Serialize tabs
-                SerializeTabs(businessControllerProvider, writer, portal, isMultiLanguage, exportTabIds, includeContent, locales, localizationCulture);
+                this.SerializeTabs(writer, portal, isMultiLanguage, exportTabIds, includeContent, locales, localizationCulture);
 
                 if (includeFiles)
                 {
@@ -116,7 +125,13 @@ namespace DotNetNuke.Entities.Portals.Templates
                 TemplatePath = filename,
             });
 
-            return (true, string.Format(Localization.GetString("ExportedMessage", LocalResourcesFile), filename));
+            return (true, string.Format(CultureInfo.CurrentCulture, Localization.GetString("ExportedMessage", LocalResourcesFile), filename));
+        }
+
+        private static TabCollection GetExportableTabs(TabCollection tabs)
+        {
+            var exportableTabs = tabs.Where(kvp => !kvp.Value.IsSystem).Select(kvp => kvp.Value);
+            return new TabCollection(exportableTabs);
         }
 
         private static void SerializePortalSettings(XmlWriter writer, PortalInfo portal, bool isMultilanguage)
@@ -129,7 +144,7 @@ namespace DotNetNuke.Entities.Portals.Templates
             writer.WriteElementString("banneradvertising", portal.BannerAdvertising.ToString(CultureInfo.InvariantCulture));
             writer.WriteElementString("defaultlanguage", portal.DefaultLanguage);
 
-            var settingsDictionary = PortalController.Instance.GetPortalSettings(portal.PortalID);
+            var settingsDictionary = PortalController.Instance.GetPortalSettings(((IPortalInfo)portal).PortalId);
 
             string setting;
             settingsDictionary.TryGetValue("DefaultPortalSkin", out setting);
@@ -288,13 +303,79 @@ namespace DotNetNuke.Entities.Portals.Templates
                 writer.WriteElementString("showquickmoduleaddmenu", setting);
             }
 
+            settingsDictionary.TryGetValue("AllowJsInModuleHeaders", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("allowjsinmoduleheaders", setting);
+            }
+
+            settingsDictionary.TryGetValue("AllowJsInModuleFooters", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("allowjsinmodulefooters", setting);
+            }
+
+            settingsDictionary.TryGetValue("AllowUserUICulture", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("allowuseruiculture", setting);
+            }
+
+            settingsDictionary.TryGetValue("EnableBrowserLanguage", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("enablebrowserlanguage", setting);
+            }
+
+            settingsDictionary.TryGetValue("SitemapCacheDays", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("sitemapcachedays", setting);
+            }
+
+            settingsDictionary.TryGetValue("SitemapExcludePriority", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("sitemapexcludepriority", setting);
+            }
+
+            settingsDictionary.TryGetValue("SitemmpIncludeHidden", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("sitemapincludehidden", setting);
+            }
+
+            settingsDictionary.TryGetValue("SitemapLevelMode", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("sitemaplevelmode", setting);
+            }
+
+            settingsDictionary.TryGetValue("SitemapMinPriority", out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("sitemapminpriority", setting);
+            }
+
+            settingsDictionary.TryGetValue(PortalTemplateImporter.HtmlTextAutoSaveEnabled, out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("enableautosave", setting);
+            }
+
+            settingsDictionary.TryGetValue(PortalTemplateImporter.HtmlTextTimeToAutoSave, out setting);
+            if (!string.IsNullOrEmpty(setting))
+            {
+                writer.WriteElementString("timetoautosave", setting);
+            }
+
             // End Portal Settings
             writer.WriteEndElement();
         }
 
-        private static void SerializeEnabledLocales(XmlWriter writer, PortalInfo portal, bool isMultilanguage, IEnumerable<string> locales)
+        private static void SerializeEnabledLocales(XmlWriter writer, IPortalInfo portal, bool isMultilanguage, IEnumerable<string> locales)
         {
-            var enabledLocales = LocaleController.Instance.GetLocales(portal.PortalID);
+            var enabledLocales = LocaleController.Instance.GetLocales(portal.PortalId);
             if (enabledLocales.Count > 1)
             {
                 writer.WriteStartElement("locales");
@@ -363,25 +444,25 @@ namespace DotNetNuke.Entities.Portals.Templates
             writer.WriteEndElement();
         }
 
-        private static void SerializeFolders(XmlWriter writer, PortalInfo objportal, ref ZipArchive zipFile)
+        private static void SerializeFolders(XmlWriter writer, IPortalInfo portal, ref ZipArchive zipFile)
         {
             // Sync db and filesystem before exporting so all required files are found
             var folderManager = FolderManager.Instance;
-            folderManager.Synchronize(objportal.PortalID);
+            folderManager.Synchronize(portal.PortalId);
             writer.WriteStartElement("folders");
 
-            foreach (var folder in folderManager.GetFolders(objportal.PortalID))
+            foreach (var folder in folderManager.GetFolders(portal.PortalId))
             {
                 writer.WriteStartElement("folder");
 
                 writer.WriteElementString("folderpath", folder.FolderPath);
-                writer.WriteElementString("storagelocation", folder.StorageLocation.ToString());
+                writer.WriteElementString("storagelocation", folder.StorageLocation.ToString(CultureInfo.InvariantCulture));
 
                 // Serialize Folder Permissions
-                SerializeFolderPermissions(writer, objportal, folder.FolderPath);
+                SerializeFolderPermissions(writer, portal, folder.FolderPath);
 
                 // Serialize files
-                SerializeFiles(writer, objportal, folder.FolderPath, ref zipFile);
+                SerializeFiles(writer, portal, folder.FolderPath, ref zipFile);
 
                 writer.WriteEndElement();
             }
@@ -432,9 +513,9 @@ namespace DotNetNuke.Entities.Portals.Templates
                 : objFile.FileName;
         }
 
-        private static void SerializeFolderPermissions(XmlWriter writer, PortalInfo objportal, string folderPath)
+        private static void SerializeFolderPermissions(XmlWriter writer, IPortalInfo portal, string folderPath)
         {
-            var permissions = FolderPermissionController.GetFolderPermissionsCollectionByFolder(objportal.PortalID, folderPath);
+            var permissions = FolderPermissionController.GetFolderPermissionsCollectionByFolder(portal.PortalId, folderPath);
 
             writer.WriteStartElement("folderpermissions");
 
@@ -453,30 +534,28 @@ namespace DotNetNuke.Entities.Portals.Templates
             writer.WriteEndElement();
         }
 
-        private static void SerializeProfileDefinitions(XmlWriter writer, PortalInfo objportal)
+        private void SerializeProfileDefinitions(XmlWriter writer, IPortalInfo portal)
         {
-            var objListController = new ListController();
-
             writer.WriteStartElement("profiledefinitions");
             foreach (ProfilePropertyDefinition objProfileProperty in
-                ProfileController.GetPropertyDefinitionsByPortal(objportal.PortalID, false, false))
+                ProfileController.GetPropertyDefinitionsByPortal(this.hostSettings, this.portalController, this.appStatus, this.portalGroupController, portal.PortalId, false, false))
             {
                 writer.WriteStartElement("profiledefinition");
 
                 writer.WriteElementString("propertycategory", objProfileProperty.PropertyCategory);
                 writer.WriteElementString("propertyname", objProfileProperty.PropertyName);
 
-                var objList = objListController.GetListEntryInfo("DataType", objProfileProperty.DataType);
+                var objList = this.listController.GetListEntryInfo("DataType", objProfileProperty.DataType);
                 writer.WriteElementString("datatype", objList == null ? "Unknown" : objList.Value);
                 writer.WriteElementString("length", objProfileProperty.Length.ToString(CultureInfo.InvariantCulture));
-                writer.WriteElementString("defaultvisibility", Convert.ToInt32(objProfileProperty.DefaultVisibility).ToString(CultureInfo.InvariantCulture));
+                writer.WriteElementString("defaultvisibility", ((int)objProfileProperty.DefaultVisibility).ToString(CultureInfo.InvariantCulture));
                 writer.WriteEndElement();
             }
 
             writer.WriteEndElement();
         }
 
-        private static void SerializeTabs(IBusinessControllerProvider businessControllerProvider, XmlWriter writer, PortalInfo portal, bool isMultilanguage, IEnumerable<int> tabsToExport, bool includeContent, IEnumerable<string> locales, string localizationCulture = "")
+        private void SerializeTabs(XmlWriter writer, PortalInfo portal, bool isMultilanguage, IEnumerable<int> tabsToExport, bool includeContent, IEnumerable<string> locales, string localizationCulture = "")
         {
             // supporting object to build the tab hierarchy
             var tabs = new Hashtable();
@@ -486,12 +565,11 @@ namespace DotNetNuke.Entities.Portals.Templates
             if (isMultilanguage)
             {
                 // Process Default Language first
-                SerializeTabs(
-                    businessControllerProvider,
+                this.SerializeTabs(
                     writer,
                     portal,
                     tabs,
-                    GetExportableTabs(TabController.Instance.GetTabsByPortal(portal.PortalID).WithCulture(portal.DefaultLanguage, true)),
+                    GetExportableTabs(TabController.Instance.GetTabsByPortal(((IPortalInfo)portal).PortalId).WithCulture(portal.DefaultLanguage, true)),
                     tabsToExport,
                     includeContent);
 
@@ -500,12 +578,11 @@ namespace DotNetNuke.Entities.Portals.Templates
                 {
                     if (cultureCode != portal.DefaultLanguage)
                     {
-                        SerializeTabs(
-                            businessControllerProvider,
+                        this.SerializeTabs(
                             writer,
                             portal,
                             tabs,
-                            GetExportableTabs(TabController.Instance.GetTabsByPortal(portal.PortalID).WithCulture(cultureCode, false)),
+                            GetExportableTabs(TabController.Instance.GetTabsByPortal(((IPortalInfo)portal).PortalId).WithCulture(cultureCode, false)),
                             tabsToExport,
                             includeContent);
                     }
@@ -513,28 +590,23 @@ namespace DotNetNuke.Entities.Portals.Templates
             }
             else
             {
-                string contentLocalizable;
-                if (PortalController.Instance.GetPortalSettings(portal.PortalID)
-                    .TryGetValue("ContentLocalizationEnabled", out contentLocalizable) &&
-                    Convert.ToBoolean(contentLocalizable))
+                if (this.portalController.GetPortalSettings(((IPortalInfo)portal).PortalId).TryGetValue("ContentLocalizationEnabled", out var contentLocalizable) && Convert.ToBoolean(contentLocalizable))
                 {
-                    SerializeTabs(
-                        businessControllerProvider,
+                    this.SerializeTabs(
                         writer,
                         portal,
                         tabs,
-                        GetExportableTabs(TabController.Instance.GetTabsByPortal(portal.PortalID).WithCulture(localizationCulture, true)),
+                        GetExportableTabs(TabController.Instance.GetTabsByPortal(((IPortalInfo)portal).PortalId).WithCulture(localizationCulture, true)),
                         tabsToExport,
                         includeContent);
                 }
                 else
                 {
-                    SerializeTabs(
-                        businessControllerProvider,
+                    this.SerializeTabs(
                         writer,
                         portal,
                         tabs,
-                        GetExportableTabs(TabController.Instance.GetTabsByPortal(portal.PortalID)),
+                        GetExportableTabs(TabController.Instance.GetTabsByPortal(((IPortalInfo)portal).PortalId)),
                         tabsToExport,
                         includeContent);
                 }
@@ -543,7 +615,7 @@ namespace DotNetNuke.Entities.Portals.Templates
             writer.WriteEndElement();
         }
 
-        private static void SerializeTabs(IBusinessControllerProvider businessControllerProvider, XmlWriter writer, PortalInfo portal, Hashtable tabs, TabCollection tabCollection, IEnumerable<int> tabsToExport, bool chkContent)
+        private void SerializeTabs(XmlWriter writer, PortalInfo portal, Hashtable tabs, TabCollection tabCollection, IEnumerable<int> tabsToExport, bool chkContent)
         {
             tabsToExport = tabsToExport.ToList();
             foreach (var tab in tabCollection.Values.OrderBy(x => x.Level))
@@ -559,7 +631,7 @@ namespace DotNetNuke.Entities.Portals.Templates
                         if (tabsToExport.Any(p => p == tabId) ||
                             tabsToExport.All(p => p != tabId))
                         {
-                            tabNode = TabController.SerializeTab(businessControllerProvider, new XmlDocument { XmlResolver = null }, tabs, tab, portal, chkContent);
+                            tabNode = TabController.SerializeTab(this.businessControllerProvider, new XmlDocument { XmlResolver = null }, tabs, tab, portal, chkContent);
                         }
                     }
                     else
@@ -570,19 +642,13 @@ namespace DotNetNuke.Entities.Portals.Templates
                             || tabsToExport.All(p => p != defaultTab.TabID)
                             || tabsToExport.Any(p => p == defaultTab.TabID))
                         {
-                            tabNode = TabController.SerializeTab(businessControllerProvider, new XmlDocument { XmlResolver = null }, tabs, tab, portal, chkContent);
+                            tabNode = TabController.SerializeTab(this.businessControllerProvider, new XmlDocument { XmlResolver = null, }, tabs, tab, portal, chkContent);
                         }
                     }
 
                     tabNode?.WriteTo(writer);
                 }
             }
-        }
-
-        private static TabCollection GetExportableTabs(TabCollection tabs)
-        {
-            var exportableTabs = tabs.Where(kvp => !kvp.Value.IsSystem).Select(kvp => kvp.Value);
-            return new TabCollection(exportableTabs);
         }
     }
 }

@@ -4,6 +4,7 @@
 namespace Dnn.PersonaBar.Vocabularies.Services
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -92,7 +93,7 @@ namespace Dnn.PersonaBar.Vocabularies.Services
             }
             catch (VocabularyNameAlreadyExistsException)
             {
-                return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("VocabularyExists.Error", LocalResourcesFile), vocabularyDto.Name));
+                return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(CultureInfo.CurrentCulture, Localization.GetString("VocabularyExists.Error", LocalResourcesFile), vocabularyDto.Name));
             }
             catch (Exception exc)
             {
@@ -123,7 +124,7 @@ namespace Dnn.PersonaBar.Vocabularies.Services
                 vocabulary.VocabularyId = vocabularyDto.VocabularyId;
 
                 this.controller.UpdateVocabulary(vocabulary);
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (VocabularyValidationException exc)
             {
@@ -153,7 +154,7 @@ namespace Dnn.PersonaBar.Vocabularies.Services
                 }
 
                 this.controller.DeleteVocabulary(new Vocabulary() { VocabularyId = vocabularyId });
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -250,7 +251,7 @@ namespace Dnn.PersonaBar.Vocabularies.Services
             }
             catch (TermValidationException)
             {
-                return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("TermExists.Error", LocalResourcesFile), termDto.Name));
+                return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(CultureInfo.CurrentCulture, Localization.GetString("TermExists.Error", LocalResourcesFile), termDto.Name));
             }
             catch (Exception exc)
             {
@@ -283,11 +284,11 @@ namespace Dnn.PersonaBar.Vocabularies.Services
                 }
 
                 this.controller.UpdateTerm(term);
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (TermValidationException)
             {
-                return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("TermExists.Error", LocalResourcesFile), termDto.Name));
+                return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(CultureInfo.CurrentCulture, Localization.GetString("TermExists.Error", LocalResourcesFile), termDto.Name));
             }
             catch (Exception exc)
             {
@@ -314,7 +315,7 @@ namespace Dnn.PersonaBar.Vocabularies.Services
                 }
 
                 this.controller.DeleteTerm(term);
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {

@@ -8,6 +8,7 @@ namespace DotNetNuke.Entities.Users
 // ReSharper restore CheckNamespace
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Linq;
     using System.Web;
@@ -26,6 +27,8 @@ namespace DotNetNuke.Entities.Users
     using DotNetNuke.Security;
     using DotNetNuke.Services.Tokens;
 
+    using Microsoft.Extensions.DependencyInjection;
+
     /// <summary>Provides access to profile properties.</summary>
     public partial class ProfilePropertyAccess : IPropertyAccess
     {
@@ -38,7 +41,7 @@ namespace DotNetNuke.Entities.Users
             this.user = user;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public CacheLevel Cacheability
         {
             get
@@ -154,26 +157,24 @@ namespace DotNetNuke.Entities.Users
                             formatString = "g";
                         }
 
-                        result = int.Parse(property.PropertyValue).ToString(formatString, formatProvider);
+                        result = int.Parse(property.PropertyValue, CultureInfo.InvariantCulture).ToString(formatString, formatProvider);
                         break;
                     case "page":
-                        int tabid;
-                        if (int.TryParse(property.PropertyValue, out tabid))
+                        if (int.TryParse(property.PropertyValue, out var tabId))
                         {
-                            TabInfo tab = TabController.Instance.GetTab(tabid, Null.NullInteger, false);
+                            TabInfo tab = TabController.Instance.GetTab(tabId, Null.NullInteger, false);
                             if (tab != null)
                             {
-                                result = string.Format("<a href='{0}'>{1}</a>", TestableGlobals.Instance.NavigateURL(tabid), tab.LocalizedTabName);
+                                result = $"<a href='{TestableGlobals.Instance.NavigateURL(tabId)}'>{tab.LocalizedTabName}</a>";
                             }
                         }
 
                         break;
                     case "image":
                         // File is stored as a FileID
-                        int fileID;
-                        if (int.TryParse(property.PropertyValue, out fileID) && fileID > 0)
+                        if (int.TryParse(property.PropertyValue, out var fileId) && fileId > 0)
                         {
-                            result = Globals.LinkClick(string.Format("fileid={0}", fileID), Null.NullInteger, Null.NullInteger);
+                            result = Globals.LinkClick($"fileid={fileId}", Null.NullInteger, Null.NullInteger);
                         }
                         else
                         {
@@ -183,7 +184,9 @@ namespace DotNetNuke.Entities.Users
                         break;
                     case "richtext":
                         var objSecurity = PortalSecurity.Instance;
+#pragma warning disable CS0618 // Type or member is obsolete
                         result = PropertyAccess.FormatString(objSecurity.InputFilter(HttpUtility.HtmlDecode(property.PropertyValue), PortalSecurity.FilterFlag.NoScripting), formatString);
+#pragma warning restore CS0618 // Type or member is obsolete
                         break;
                     default:
                         result = HttpUtility.HtmlEncode(PropertyAccess.FormatString(property.PropertyValue, formatString));
@@ -197,28 +200,35 @@ namespace DotNetNuke.Entities.Users
         /// <summary>Gets the date type for a profile property definition.</summary>
         /// <param name="definition">The <see cref="ProfilePropertyDefinition"/> to check.</param>
         /// <returns>A string representing the data type such as: truefalse, date, datetime, integer, page, image or richtext.</returns>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
         public static string DisplayDataType(ProfilePropertyDefinition definition)
+            => DisplayDataType(Globals.GetCurrentServiceProvider().GetRequiredService<ListController>(), definition);
+
+        /// <summary>Gets the date type for a profile property definition.</summary>
+        /// <param name="listController">The list controller.</param>
+        /// <param name="definition">The <see cref="ProfilePropertyDefinition"/> to check.</param>
+        /// <returns>A string representing the data type such as: truefalse, date, datetime, integer, page, image or richtext.</returns>
+        public static string DisplayDataType(ListController listController, ProfilePropertyDefinition definition)
         {
-            string cacheKey = string.Format("DisplayDataType:{0}", definition.DataType);
-            string strDataType = Convert.ToString(DataCache.GetCache(cacheKey)) + string.Empty;
+            string cacheKey = string.Format(CultureInfo.InvariantCulture, "DisplayDataType:{0}", definition.DataType);
+            string strDataType = Convert.ToString(DataCache.GetCache(cacheKey), CultureInfo.InvariantCulture) + string.Empty;
             if (strDataType == string.Empty)
             {
-                var objListController = new ListController();
-                strDataType = objListController.GetListEntryInfo("DataType", definition.DataType).Value;
+                strDataType = listController.GetListEntryInfo("DataType", definition.DataType).Value;
                 DataCache.SetCache(cacheKey, strDataType);
             }
 
             return strDataType;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
+        [SuppressMessage("Microsoft.Naming", "CA1725:ParameterNamesShouldMatchBaseDeclaration", Justification = "Breaking change")]
         public string GetProperty(string propertyName, string format, CultureInfo formatProvider, UserInfo accessingUser, Scope currentScope, ref bool propertyNotFound)
         {
-            if (currentScope >= Scope.DefaultSettings && this.user != null && this.user.Profile != null)
+            if (currentScope >= Scope.DefaultSettings && this.user is { Profile: not null, })
             {
                 var profile = this.user.Profile;
-                var property = profile.ProfileProperties.Cast<ProfilePropertyDefinition>()
-                                                        .SingleOrDefault(p => string.Equals(p.PropertyName, propertyName, StringComparison.OrdinalIgnoreCase));
+                var property = profile.ProfileProperties.SingleOrDefault(p => string.Equals(p.PropertyName, propertyName, StringComparison.OrdinalIgnoreCase));
 
                 if (property != null)
                 {

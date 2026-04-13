@@ -7,10 +7,13 @@ namespace DotNetNuke.Services.Search
     using System.Collections.Generic;
     using System.Data;
     using System.Data.SqlTypes;
+    using System.Globalization;
     using System.Linq;
     using System.Text;
     using System.Text.RegularExpressions;
 
+    using DotNetNuke.Abstractions.Application;
+    using DotNetNuke.Abstractions.Logging;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Lists;
     using DotNetNuke.Common.Utilities;
@@ -24,8 +27,10 @@ namespace DotNetNuke.Services.Search
     using Lucene.Net.QueryParsers;
     using Lucene.Net.Search;
 
+    using Microsoft.Extensions.DependencyInjection;
+
     /// <summary>The UserIndexer is an implementation of the abstract <see cref="IndexingProviderBase"/> class.</summary>
-    public class UserIndexer : IndexingProviderBase
+    public class UserIndexer(ListController listController, IPortalController portalController, IHostSettings hostSettings, DataProvider dataProvider, IUserController userController, IApplicationStatusInfo appStatus, IPortalGroupController portalGroupController, IEventLogger eventLogger) : IndexingProviderBase
     {
         internal const string UserIndexResetFlag = "UserIndexer_ReIndex";
         internal const string ValueSplitFlag = "$$$";
@@ -34,6 +39,21 @@ namespace DotNetNuke.Services.Search
         private const int ClauseMaxCount = 1024;
 
         private static readonly int UserSearchTypeId = SearchHelper.Instance.GetSearchTypeByName("user").SearchTypeId;
+        private readonly ListController listController = listController ?? Globals.GetCurrentServiceProvider().GetRequiredService<ListController>();
+        private readonly IPortalController portalController = portalController ?? Globals.GetCurrentServiceProvider().GetRequiredService<IPortalController>();
+        private readonly IHostSettings hostSettings = hostSettings ?? Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>();
+        private readonly DataProvider dataProvider = dataProvider ?? Globals.GetCurrentServiceProvider().GetRequiredService<DataProvider>();
+        private readonly IUserController userController = userController ?? Globals.GetCurrentServiceProvider().GetRequiredService<IUserController>();
+        private readonly IApplicationStatusInfo appStatus = appStatus ?? Globals.GetCurrentServiceProvider().GetRequiredService<IApplicationStatusInfo>();
+        private readonly IPortalGroupController portalGroupController = portalGroupController ?? Globals.GetCurrentServiceProvider().GetRequiredService<IPortalGroupController>();
+        private readonly IEventLogger eventLogger = eventLogger ?? Globals.GetCurrentServiceProvider().GetRequiredService<IEventLogger>();
+
+        /// <summary>Initializes a new instance of the <see cref="UserIndexer"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
+        public UserIndexer()
+            : this(null, null, null, null, null, null, null, null)
+        {
+        }
 
         /// <summary>Searches for and indexes modified users for the given portal.</summary>
         /// <param name="portalId">The portal ID.</param>
@@ -50,27 +70,24 @@ namespace DotNetNuke.Services.Search
             startDateLocal = this.GetLocalTimeOfLastIndexedItem(portalId, schedule.ScheduleID, startDateLocal);
             var searchDocuments = new Dictionary<string, SearchDocument>();
 
-            var needReindex = PortalController.GetPortalSettingAsBoolean(UserIndexResetFlag, portalId, false);
+            var needReindex = PortalController.GetPortalSettingAsBoolean(this.portalController, UserIndexResetFlag, portalId, false);
             if (needReindex)
             {
                 startDateLocal = SqlDateTime.MinValue.Value.AddDays(1);
             }
 
-            var controller = new ListController();
-            var textDataType = controller.GetListEntryInfo("DataType", "Text");
-            var richTextDataType = controller.GetListEntryInfo("DataType", "RichText");
+            var textDataType = this.listController.GetListEntryInfo("DataType", "Text");
+            var richTextDataType = this.listController.GetListEntryInfo("DataType", "RichText");
 
-            var profileDefinitions = ProfileController.GetPropertyDefinitionsByPortal(portalId, false, false)
-                .Cast<ProfilePropertyDefinition>()
-                .Where(d => (textDataType != null && d.DataType == textDataType.EntryID)
-                            || (richTextDataType != null && d.DataType == richTextDataType.EntryID))
+            var profileDefinitions = ProfileController.GetPropertyDefinitionsByPortal(this.hostSettings, this.portalController, this.appStatus, this.portalGroupController, portalId, false, false)
+                .Where(d =>
+                    (textDataType != null && d.DataType == textDataType.EntryID) || (richTextDataType != null && d.DataType == richTextDataType.EntryID))
                 .ToList();
 
             try
             {
-                int startUserId;
                 var checkpointData = this.GetLastCheckpointData(portalId, schedule.ScheduleID);
-                if (string.IsNullOrEmpty(checkpointData) || !int.TryParse(checkpointData, out startUserId))
+                if (string.IsNullOrEmpty(checkpointData) || !int.TryParse(checkpointData, out var startUserId))
                 {
                     startUserId = Null.NullInteger;
                 }
@@ -87,7 +104,7 @@ namespace DotNetNuke.Services.Search
                         DeleteDocuments(portalId, indexedUsers);
                         var values = searchDocuments.Values;
                         totalIndexed += IndexCollectedDocs(indexer, values);
-                        this.SetLastCheckpointData(portalId, schedule.ScheduleID, startUserId.ToString());
+                        this.SetLastCheckpointData(portalId, schedule.ScheduleID, startUserId.ToString(CultureInfo.InvariantCulture));
                         this.SetLocalTimeOfLastIndexedItem(portalId, schedule.ScheduleID, values.Last().ModifiedTimeUtc.ToLocalTime());
                         searchDocuments.Clear();
                         checkpointModified = true;
@@ -106,7 +123,7 @@ namespace DotNetNuke.Services.Search
 
                 if (needReindex)
                 {
-                    PortalController.DeletePortalSetting(portalId, UserIndexResetFlag);
+                    PortalController.DeletePortalSetting(this.dataProvider, this.eventLogger, this.userController, portalId, UserIndexResetFlag);
                 }
             }
             catch (Exception ex)
@@ -118,7 +135,7 @@ namespace DotNetNuke.Services.Search
             if (checkpointModified)
             {
                 // at last reset start user pointer
-                this.SetLastCheckpointData(portalId, schedule.ScheduleID, Null.NullInteger.ToString());
+                this.SetLastCheckpointData(portalId, schedule.ScheduleID, Null.NullInteger.ToString(CultureInfo.InvariantCulture));
                 this.SetLocalTimeOfLastIndexedItem(portalId, schedule.ScheduleID, DateTime.Now);
             }
 
@@ -165,9 +182,9 @@ namespace DotNetNuke.Services.Search
                     var splitValues = Regex.Split(propertyValue, Regex.Escape(ValueSplitFlag));
 
                     propertyValue = splitValues[0];
-                    var visibilityMode = (UserVisibilityMode)Convert.ToInt32(splitValues[1]);
+                    var visibilityMode = (UserVisibilityMode)Convert.ToInt32(splitValues[1], CultureInfo.InvariantCulture);
                     var extendedVisibility = splitValues[2];
-                    var modifiedTime = Convert.ToDateTime(splitValues[3]).ToUniversalTime();
+                    var modifiedTime = Convert.ToDateTime(splitValues[3], CultureInfo.InvariantCulture).ToUniversalTime();
 
                     if (string.IsNullOrEmpty(propertyValue))
                     {
@@ -248,9 +265,7 @@ namespace DotNetNuke.Services.Search
                 searchDocuments.Add(searchDoc.UniqueKey, searchDoc);
             }
 
-            if (!searchDocuments.ContainsKey(
-                            string.Format("{0}_{1}", userSearch.UserId, UserVisibilityMode.AdminOnly)
-                                .ToLowerInvariant()))
+            if (!searchDocuments.ContainsKey($"{userSearch.UserId}_{UserVisibilityMode.AdminOnly}".ToLowerInvariant()))
             {
                 if (!indexedUsers.Contains(userSearch.UserId))
                 {
@@ -273,7 +288,7 @@ namespace DotNetNuke.Services.Search
                 searchDoc.NumericKeys.Add("superuser", Convert.ToInt32(userSearch.SuperUser));
                 searchDoc.Keywords.Add("username", userSearch.UserName);
                 searchDoc.Keywords.Add("email", userSearch.Email);
-                searchDoc.Keywords.Add("createdondate", userSearch.CreatedOnDate.ToString(Constants.DateTimeFormat));
+                searchDoc.Keywords.Add("createdondate", userSearch.CreatedOnDate.ToString(Constants.DateTimeFormat, CultureInfo.InvariantCulture));
                 searchDocuments.Add(searchDoc.UniqueKey, searchDoc);
             }
         }
@@ -286,13 +301,13 @@ namespace DotNetNuke.Services.Search
                 var modifiedOn = reader["LastModifiedOnDate"] as DateTime? ?? createdOn;
                 var userSearch = new UserSearch
                 {
-                    UserId = Convert.ToInt32(reader["UserId"]),
+                    UserId = Convert.ToInt32(reader["UserId"], CultureInfo.InvariantCulture),
                     DisplayName = reader["DisplayName"].ToString(),
                     Email = reader["Email"].ToString(),
                     UserName = reader["Username"].ToString(),
-                    SuperUser = Convert.ToBoolean(reader["IsSuperUser"]),
-                    LastModifiedOnDate = Convert.ToDateTime(modifiedOn).ToUniversalTime(),
-                    CreatedOnDate = Convert.ToDateTime(createdOn).ToUniversalTime(),
+                    SuperUser = Convert.ToBoolean(reader["IsSuperUser"], CultureInfo.InvariantCulture),
+                    LastModifiedOnDate = Convert.ToDateTime(modifiedOn, CultureInfo.InvariantCulture).ToUniversalTime(),
+                    CreatedOnDate = Convert.ToDateTime(createdOn, CultureInfo.InvariantCulture).ToUniversalTime(),
                 };
 
                 if (!string.IsNullOrEmpty(userSearch.FirstName) && userSearch.FirstName.Contains(ValueSplitFlag))
@@ -326,6 +341,7 @@ namespace DotNetNuke.Services.Search
                 {
                     var mode = Enum.GetName(typeof(UserVisibilityMode), item);
                     keyword.AppendFormat(
+                        CultureInfo.InvariantCulture,
                         "{2} {0}_{1} OR {0}_{1}* ",
                         userId,
                         mode,

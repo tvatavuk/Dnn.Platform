@@ -53,7 +53,7 @@ namespace Dnn.PersonaBar.Users.Components
         // This method can easily be modified to pass password, display name, etc.
         // It is recommended to write unit tests.
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public UserBasicDto Register(RegisterationDetails registerationDetails)
         {
             var portalSettings = registerationDetails.PortalSettings;
@@ -80,7 +80,9 @@ namespace Dnn.PersonaBar.Users.Components
 
             var cleanUsername = PortalSecurity.Instance.InputFilter(
                 username,
+#pragma warning disable CS0618 // Type or member is obsolete
                 PortalSecurity.FilterFlag.NoScripting | PortalSecurity.FilterFlag.NoAngleBrackets | PortalSecurity.FilterFlag.NoMarkup);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             if (!cleanUsername.Equals(username, StringComparison.Ordinal))
             {
@@ -252,7 +254,7 @@ namespace Dnn.PersonaBar.Users.Components
             // clear cache
             if (createStatus == UserCreateStatus.Success)
             {
-                CachingProvider.Instance().Remove(string.Format(DataCache.PortalUserCountCacheKey, portalSettings.PortalId));
+                CachingProvider.Instance().Remove(string.Format(CultureInfo.InvariantCulture, DataCache.PortalUserCountCacheKey, portalSettings.PortalId));
             }
 
             if (createStatus != UserCreateStatus.Success)
@@ -260,11 +262,11 @@ namespace Dnn.PersonaBar.Users.Components
                 throw new InvalidUserRegisterException(UserController.GetUserCreateStatus(createStatus));
             }
 
-            // if (registerationDetails.IgnoreRegistrationMode)
-            //            {
-            //                Mail.SendMail(newUser, MessageType.UserRegistrationPublic, portalSettings);
-            //                return UserBasicDto.FromUserInfo(newUser);
-            //            }
+            ////if (registerationDetails.IgnoreRegistrationMode)
+            ////{
+            ////    Mail.SendMail(newUser, MessageType.UserRegistrationPublic, portalSettings);
+            ////    return UserBasicDto.FromUserInfo(newUser);
+            ////}
 
             // send notification to portal administrator of new user registration
             // check the receive notification setting first, but if register type is Private, we will always send the notification email.
@@ -279,7 +281,7 @@ namespace Dnn.PersonaBar.Users.Components
             return UserBasicDto.FromUserInfo(newUser);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override Func<IRegisterController> GetFactory()
         {
             return () => new RegisterController();
@@ -313,7 +315,7 @@ namespace Dnn.PersonaBar.Users.Components
 
         private static bool GetBoolSetting(Hashtable settings, string settingKey)
         {
-            return settings[settingKey] != null && Convert.ToBoolean(settings[settingKey]);
+            return settings[settingKey] != null && Convert.ToBoolean(settings[settingKey], CultureInfo.InvariantCulture);
         }
 
         private static string GetStringSetting(Hashtable settings, string settingKey)

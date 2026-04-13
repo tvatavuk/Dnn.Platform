@@ -4,10 +4,12 @@
 namespace DotNetNuke.UI.Modules.Html5
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Web;
     using System.Web.UI;
 
+    using DotNetNuke.Abstractions.Application;
     using DotNetNuke.Abstractions.Modules;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
@@ -20,17 +22,25 @@ namespace DotNetNuke.UI.Modules.Html5
 
     using Microsoft.Extensions.DependencyInjection;
 
-    public class Html5HostControl : ModuleControlBase, IActionable
+    /// <summary>A WebForms control which outputs the content for a control using the HTML module pattern.</summary>
+    /// <param name="html5File">The path to the HTML file.</param>
+    /// <param name="businessControllerProvider">The business controller provider.</param>
+    /// <param name="servicesFramework">The web API service framework.</param>
+    /// <param name="hostSettings">The host settings.</param>
+    public class Html5HostControl(string html5File, IBusinessControllerProvider businessControllerProvider, IServicesFramework servicesFramework, IHostSettings hostSettings)
+        : ModuleControlBase, IActionable
     {
-        private readonly string html5File;
-        private readonly IBusinessControllerProvider businessControllerProvider;
+        private readonly string html5File = html5File;
+        private readonly IBusinessControllerProvider businessControllerProvider = businessControllerProvider ?? Globals.GetCurrentServiceProvider().GetRequiredService<IBusinessControllerProvider>();
+        private readonly IServicesFramework servicesFramework = servicesFramework ?? Globals.GetCurrentServiceProvider().GetRequiredService<IServicesFramework>();
+        private readonly IHostSettings hostSettings = hostSettings ?? Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>();
         private string fileContent;
 
         /// <summary>Initializes a new instance of the <see cref="Html5HostControl"/> class.</summary>
         /// <param name="html5File">The path to the HTML file.</param>
         [Obsolete("Deprecated in DotNetNuke 10.0.0. Please use overload with IBusinessControllerProvider. Scheduled removal in v12.0.0.")]
         public Html5HostControl(string html5File)
-            : this(html5File, null)
+            : this(html5File, null, null)
         {
             this.html5File = html5File;
         }
@@ -38,16 +48,26 @@ namespace DotNetNuke.UI.Modules.Html5
         /// <summary>Initializes a new instance of the <see cref="Html5HostControl"/> class.</summary>
         /// <param name="html5File">The path to the HTML file.</param>
         /// <param name="businessControllerProvider">The business controller provider.</param>
+        [Obsolete("Deprecated in DotNetNuke 10.2.2. Please use overload with IServicesFramework. Scheduled removal in v12.0.0.")]
         public Html5HostControl(string html5File, IBusinessControllerProvider businessControllerProvider)
+            : this(html5File, businessControllerProvider, null)
         {
-            this.html5File = html5File;
-            this.businessControllerProvider = businessControllerProvider ?? Globals.GetCurrentServiceProvider().GetRequiredService<IBusinessControllerProvider>();
         }
 
-        /// <inheritdoc/>
+        /// <summary>Initializes a new instance of the <see cref="Html5HostControl"/> class.</summary>
+        /// <param name="html5File">The path to the HTML file.</param>
+        /// <param name="businessControllerProvider">The business controller provider.</param>
+        /// <param name="servicesFramework">The web API service framework.</param>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IHostSettings. Scheduled removal in v12.0.0.")]
+        public Html5HostControl(string html5File, IBusinessControllerProvider businessControllerProvider, IServicesFramework servicesFramework)
+            : this(html5File, businessControllerProvider, servicesFramework, null)
+        {
+        }
+
+        /// <inheritdoc />
         public ModuleActionCollection ModuleActions { get; private set; }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
@@ -76,10 +96,10 @@ namespace DotNetNuke.UI.Modules.Html5
             }
 
             // Register for Services Framework
-            ServicesFramework.Instance.RequestAjaxScriptSupport();
+            this.servicesFramework.RequestAjaxScriptSupport();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnPreRender(EventArgs e)
         {
             base.OnPreRender(e);
@@ -92,32 +112,31 @@ namespace DotNetNuke.UI.Modules.Html5
 
         private static string GetFileContentInternal(string filepath)
         {
-            using (var reader = new StreamReader(filepath))
-            {
-                return reader.ReadToEnd();
-            }
+            using var reader = new StreamReader(filepath);
+            return reader.ReadToEnd();
         }
 
         private string GetFileContent(string filepath)
         {
-            var cacheKey = string.Format(DataCache.SpaModulesContentHtmlFileCacheKey, filepath);
+            var cacheKey = string.Format(CultureInfo.InvariantCulture, DataCache.SpaModulesContentHtmlFileCacheKey, filepath);
             var absoluteFilePath = this.Page.Server.MapPath(filepath);
             var cacheItemArgs = new CacheItemArgs(cacheKey, DataCache.SpaModulesHtmlFileTimeOut, DataCache.SpaModulesHtmlFileCachePriority)
             {
                 CacheDependency = new DNNCacheDependency(absoluteFilePath),
             };
-            return CBO.GetCachedObject<string>(cacheItemArgs, c => GetFileContentInternal(absoluteFilePath));
+            return CBO.GetCachedObject<string>(
+                this.hostSettings,
+                cacheItemArgs,
+                _ => GetFileContentInternal(absoluteFilePath));
         }
 
         private bool FileExists(string filepath)
         {
-            var cacheKey = string.Format(DataCache.SpaModulesFileExistsCacheKey, filepath);
+            var cacheKey = string.Format(CultureInfo.InvariantCulture, DataCache.SpaModulesFileExistsCacheKey, filepath);
             return CBO.GetCachedObject<bool>(
-                new CacheItemArgs(
-                cacheKey,
-                DataCache.SpaModulesHtmlFileTimeOut,
-                DataCache.SpaModulesHtmlFileCachePriority),
-                c => File.Exists(this.Page.Server.MapPath(filepath)));
+                this.hostSettings,
+                new CacheItemArgs(cacheKey, DataCache.SpaModulesHtmlFileTimeOut, DataCache.SpaModulesHtmlFileCachePriority),
+                _ => File.Exists(this.Page.Server.MapPath(filepath)));
         }
     }
 }

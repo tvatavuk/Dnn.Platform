@@ -4,6 +4,7 @@
 
 namespace DotNetNuke.Common.Utilities
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
 
@@ -15,7 +16,7 @@ namespace DotNetNuke.Common.Utilities
         private readonly List<string> extensions;
 
         /// <summary>Initializes a new instance of the <see cref="FileExtensionWhitelist"/> class.</summary>
-        /// <param name="extensionList">a comma seperated list of file extensions with no '.'.</param>
+        /// <param name="extensionList">a comma separated list of file extensions with no '.'.</param>
         /// <remarks><paramref name="extensionList"/>should match the format used in the FileExtensions Host setting specifically it
         /// should not have an '.' in the extensions (e.g. txt,jpg,png,doc).</remarks>
         public FileExtensionWhitelist(string extensionList)
@@ -48,25 +49,21 @@ namespace DotNetNuke.Common.Utilities
         /// <inheritdoc />
         public bool IsAllowedExtension(string extension, IEnumerable<string> additionalExtensions)
         {
-            var allExtensions = this.CombineLists(additionalExtensions).ToList();
+            var allExtensions = this.CombineLists(additionalExtensions).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (allExtensions.Count == 0)
             {
                 return true;
             }
 
-            if (!extension.StartsWith("."))
+            if (!extension.StartsWith(".", StringComparison.Ordinal))
             {
-                extension = "." + extension.ToLowerInvariant();
-            }
-            else
-            {
-                extension = extension.ToLowerInvariant();
+                extension = "." + extension;
             }
 
             return allExtensions.Contains(extension);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override string ToString()
         {
             return this.ToDisplayString();
@@ -102,7 +99,7 @@ namespace DotNetNuke.Common.Utilities
 
         private static IEnumerable<string> NormalizeExtensions(IEnumerable<string> additionalExtensions)
         {
-            return additionalExtensions.Select(ext => (ext.StartsWith(".") ? ext : "." + ext).ToLowerInvariant());
+            return additionalExtensions.Select(ext => (ext.StartsWith(".", StringComparison.Ordinal) ? ext : "." + ext).ToLowerInvariant());
         }
 
         private IEnumerable<string> CombineLists(IEnumerable<string> additionalExtensions)

@@ -12,10 +12,10 @@
     <ModuleFolderName>$(WebsitePath)\DesktopModules\Dnn\ContactList</ModuleFolderName>
     <InstallPath>$(PathToArtifacts)\SampleModules</InstallPath>
   </PropertyGroup>
-  <Target Name="CopySqlDataProviderFiles" AfterTargets="Build" Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <CreateItem Include="$(MSBuildProjectDirectory)\..\Dnn.ContactList.Api\Providers\DataProviders\SqlDataProvider\*.SqlDataProvider">
-      <Output TaskParameter="Include" ItemName="SqlDataProviderFiles" />
-    </CreateItem>
+  <Target Name="CopySqlDataProviderFiles" BeforeTargets="Build" Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <ItemGroup>
+      <SqlDataProviderFiles Include="$(MSBuildProjectDirectory)\..\Dnn.ContactList.Api\Providers\DataProviders\SqlDataProvider\*.SqlDataProvider" />
+    </ItemGroup>
     <Copy SourceFiles="@(SqlDataProviderFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Providers\DataProviders\SqlDataProvider" />
   </Target>
   <Target Name="CopyBinOrNot" Condition=" '$(CopySampleProjects)' == 'True' ">
@@ -24,10 +24,10 @@
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Dnn.ContactList.Api.pdb" DestinationFolder="$(WebsitePath)/bin" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Dnn.ContactList.Api.xml" DestinationFolder="$(WebsitePath)/bin" />
   </Target>
-  <Target Name="PostBuild" AfterTargets="CopySqlDataProviderFiles" DependsOnTargets="CopyBinOrNot;GetFiles;UpdateFiles;DebugProject;Package">
-    <CreateItem Include="$(MSBuildProjectDirectory)\Providers\DataProviders\SqlDataProvider\*.SqlDataProvider">
-      <Output TaskParameter="Include" ItemName="CopiedSqlDataProviderFiles" />
-    </CreateItem>
+  <Target Name="PostBuild" AfterTargets="Package" DependsOnTargets="CopyBinOrNot;GetFiles;UpdateFiles;DebugProject;Package">
+    <ItemGroup>
+      <CopiedSqlDataProviderFiles Include="$(MSBuildProjectDirectory)\Providers\DataProviders\SqlDataProvider\*.SqlDataProvider" />
+    </ItemGroup>
     <Delete Files="@(CopiedSqlDataProviderFiles)" />
     <RemoveDir Directories="$(MSBuildProjectDirectory)\Providers" />
   </Target>

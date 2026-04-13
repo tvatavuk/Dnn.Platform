@@ -85,6 +85,9 @@ UpgradeLog*.XML
 # Node
 node_modules/
 
+# AI Assistants
+.cursor/
+
 ############
 ## DNN
 ############
@@ -100,7 +103,7 @@ DNN_*.zip
 !DNN [Pp]latform/[Cc]omponents
 !DNN [Pp]latform/[Cc]ontrols
 DNN [Pp]latform/[Cc]omponents/[Cc]lient[Dd]ependency/[Ss]ource/[Bb]in
-DNN [Pp]latform/[Cc]ontrols/[Cc]ountry[Ll]ist[Bb]ox/[Bb]in/*
+DNN [Pp]latform/[Cc]ontrols/*/[Bb]in/*
 
 DNN [Pp]latform/*/[Bb]in
 DNN [Pp]latform/Tests/*/[Bb]in/*
@@ -148,5 +151,3 @@ yarn-error.log
 
 /DotNetNuke.Internal.SourceGenerators/bin/
 /DNN Platform/Tests/DotNetNuke.Tests.SourceGenerators/Snapshots/*.received.*
-Dnn.AdminExperience/Dnn.PersonaBar.Extensions/admin/personaBar/Dnn.Pages/scripts/bundles/
-Dnn.AdminExperience/Dnn.PersonaBar.Extensions/admin/personaBar/Dnn.Roles/scripts/bundles/

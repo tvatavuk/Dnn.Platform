@@ -13,10 +13,11 @@ namespace DotNetNuke.Services.Search.Internals
     using System.Web;
     using System.Web.Caching;
 
+    using DotNetNuke.Abstractions.Application;
+    using DotNetNuke.Abstractions.Portals;
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Data;
-    using DotNetNuke.Entities.Controllers;
     using DotNetNuke.Entities.Modules;
     using DotNetNuke.Entities.Modules.Definitions;
     using DotNetNuke.Entities.Portals;
@@ -29,6 +30,8 @@ namespace DotNetNuke.Services.Search.Internals
     using Lucene.Net.Index;
     using Lucene.Net.Search;
 
+    using Microsoft.Extensions.DependencyInjection;
+
     using Localization = DotNetNuke.Services.Localization.Localization;
 
     /// <summary>  The Impl Controller class for Lucene.</summary>
@@ -38,7 +41,7 @@ namespace DotNetNuke.Services.Search.Internals
         private const string SearchableModuleDefsCacheKey = "SearchableModuleDefs";
         private const string LocalizedResxFile = "~/DesktopModules/Admin/SearchResults/App_LocalResources/SearchableModules.resx";
 
-        private const string HtmlTagsWithAttrs = "<[a-z_:][\\w:.-]*(\\s+(?<attr>\\w+\\s*?=\\s*?[\"'].*?[\"']))+\\s*/?>";
+        private const string HtmlTagsWithAttrs = "<[a-z_:][\\w:.-]*(?>(?:\\s+(?<attr>\\w+\\s*?=\\s*?[\"'].*?[\"']))*)?\\s*/?>";
 
         private const string AttrText = "[\"'](?<text>.*?)[\"']";
         private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(InternalSearchControllerImpl));
@@ -46,11 +49,13 @@ namespace DotNetNuke.Services.Search.Internals
         private static readonly string[] HtmlAttributesToRetain = { "alt", "title" };
         private static readonly DataProvider DataProvider = DataProvider.Instance();
 
-        private static readonly Regex StripOpeningTagsRegex = new Regex(@"<\w*\s*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex StripClosingTagsRegex = new Regex(@"</\w*\s*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex HtmlTagsRegex = new Regex(HtmlTagsWithAttrs, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex AttrTextRegex = new Regex(AttrText, RegexOptions.Compiled);
+        private static readonly Regex StripOpeningTagsRegex = RegexUtils.GetCachedRegex(@"<\w*\s*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex StripClosingTagsRegex = RegexUtils.GetCachedRegex(@"</\w*\s*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex HtmlTagsRegex = RegexUtils.GetCachedRegex(HtmlTagsWithAttrs, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex AttrTextRegex = RegexUtils.GetCachedRegex(AttrText, RegexOptions.Compiled);
 
+        private readonly IHostSettings hostSettings;
+        private readonly IServiceProvider serviceProvider;
         private readonly int titleBoost;
         private readonly int tagBoost;
         private readonly int contentBoost;
@@ -59,21 +64,34 @@ namespace DotNetNuke.Services.Search.Internals
         private readonly int moduleSearchTypeId = SearchHelper.Instance.GetSearchTypeByName("module").SearchTypeId;
 
         /// <summary>Initializes a new instance of the <see cref="InternalSearchControllerImpl"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with IHostSettings. Scheduled removal in v12.0.0.")]
         public InternalSearchControllerImpl()
+            : this(null, null, null)
         {
-            var hostController = HostController.Instance;
-            this.titleBoost = hostController.GetInteger(Constants.SearchTitleBoostSetting, Constants.DefaultSearchTitleBoost);
-            this.tagBoost = hostController.GetInteger(Constants.SearchTagBoostSetting, Constants.DefaultSearchTagBoost);
-            this.contentBoost = hostController.GetInteger(Constants.SearchContentBoostSetting, Constants.DefaultSearchKeywordBoost);
-            this.descriptionBoost = hostController.GetInteger(Constants.SearchDescriptionBoostSetting, Constants.DefaultSearchDescriptionBoost);
-            this.authorBoost = hostController.GetInteger(Constants.SearchAuthorBoostSetting, Constants.DefaultSearchAuthorBoost);
         }
 
-        /// <inheritdoc/>
+        /// <summary>Initializes a new instance of the <see cref="InternalSearchControllerImpl"/> class.</summary>
+        /// <param name="hostSettingsService">The host settings service.</param>
+        /// <param name="hostSettings">The host settings.</param>
+        /// <param name="serviceProvider">The service provider.</param>
+        public InternalSearchControllerImpl(IHostSettingsService hostSettingsService, IHostSettings hostSettings, IServiceProvider serviceProvider)
+        {
+            hostSettingsService ??= Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettingsService>();
+            this.hostSettings = hostSettings ?? Globals.GetCurrentServiceProvider().GetRequiredService<IHostSettings>();
+            this.serviceProvider = serviceProvider ?? Globals.GetCurrentServiceProvider();
+            this.titleBoost = hostSettingsService.GetInteger(Constants.SearchTitleBoostSetting, Constants.DefaultSearchTitleBoost);
+            this.tagBoost = hostSettingsService.GetInteger(Constants.SearchTagBoostSetting, Constants.DefaultSearchTagBoost);
+            this.contentBoost = hostSettingsService.GetInteger(Constants.SearchContentBoostSetting, Constants.DefaultSearchKeywordBoost);
+            this.descriptionBoost = hostSettingsService.GetInteger(Constants.SearchDescriptionBoostSetting, Constants.DefaultSearchDescriptionBoost);
+            this.authorBoost = hostSettingsService.GetInteger(Constants.SearchAuthorBoostSetting, Constants.DefaultSearchAuthorBoost);
+        }
+
+        /// <inheritdoc />
         public IEnumerable<SearchContentSource> GetSearchContentSourceList(int portalId)
         {
             var searchableModuleDefsCacheArgs = new CacheItemArgs(
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     SearchableModuleDefsKey,
                     SearchableModuleDefsCacheKey,
                     portalId,
@@ -81,30 +99,32 @@ namespace DotNetNuke.Services.Search.Internals
                 120,
                 CacheItemPriority.Default);
 
-            var list = CBO.GetCachedObject<IList<SearchContentSource>>(
-                searchableModuleDefsCacheArgs, this.SearchContentSourceCallback);
-
-            return list;
+            return CBO.GetCachedObject<IList<SearchContentSource>>(
+                this.hostSettings,
+                searchableModuleDefsCacheArgs,
+                this.SearchContentSourceCallback);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public string GetSearchDocumentTypeDisplayName(SearchResult searchResult)
         {
             // ModuleDefId will be zero for non-module
             var key = $"{searchResult.SearchTypeId}-{searchResult.ModuleDefId}-{Thread.CurrentThread.CurrentCulture}";
             var keys = CBO.Instance.GetCachedObject<IDictionary<string, string>>(
-                            new CacheItemArgs(key, 120, CacheItemPriority.Default), this.SearchDocumentTypeDisplayNameCallBack, false);
+                new CacheItemArgs(key, 120, CacheItemPriority.Default),
+                this.SearchDocumentTypeDisplayNameCallBack,
+                false);
 
             return keys.TryGetValue(key, out var documentTypeDisplayName) ? documentTypeDisplayName : string.Empty;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void AddSearchDocument(SearchDocument searchDocument)
         {
             this.AddSearchDocumentInternal(searchDocument, false);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void AddSearchDocuments(IEnumerable<SearchDocument> searchDocuments)
         {
             var searchDocs = searchDocuments as IList<SearchDocument> ?? searchDocuments.ToList();
@@ -113,37 +133,37 @@ namespace DotNetNuke.Services.Search.Internals
                 const int commitBatchSize = 1024 * 16;
                 var idx = 0;
 
-                // var added = false;
+                ////var added = false;
                 foreach (var searchDoc in searchDocs)
                 {
                     try
                     {
                         this.AddSearchDocumentInternal(searchDoc, (++idx % commitBatchSize) == 0);
 
-                        // added = true;
+                        ////added = true;
                     }
                     catch (Exception ex)
                     {
-                        Logger.ErrorFormat("Search Document error: {0}{1}{2}", searchDoc, Environment.NewLine, ex);
+                        Logger.ErrorFormat(CultureInfo.InvariantCulture, "Search Document error: {0}{1}{2}", searchDoc, Environment.NewLine, ex);
                     }
                 }
 
                 // Note: modified to do commit only once at the end of scheduler job
                 // check so we don't commit again
-                // if (added && (idx % commitBatchSize) != 0)
-                // {
-                //    Commit();
-                // }
+                ////if (added && (idx % commitBatchSize) != 0)
+                ////{
+                ////   Commit();
+                ////}
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteSearchDocument(SearchDocument searchDocument)
         {
             this.DeleteSearchDocumentInternal(searchDocument, false);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteSearchDocumentsByModule(int portalId, int moduleId, int moduleDefId)
         {
             Requires.NotNegative("PortalId", portalId);
@@ -157,7 +177,7 @@ namespace DotNetNuke.Services.Search.Internals
             });
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteAllDocuments(int portalId, int searchTypeId)
         {
             Requires.NotNegative("SearchTypeId", searchTypeId);
@@ -169,20 +189,20 @@ namespace DotNetNuke.Services.Search.Internals
             });
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void Commit()
         {
             LuceneController.Instance.Commit();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public bool OptimizeSearchIndex()
         {
             // run optimization in background
             return LuceneController.Instance.OptimizeSearchIndex(true);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public SearchStatistics GetSearchStatistics()
         {
             return LuceneController.Instance.GetSearchStatistics();
@@ -201,16 +221,13 @@ namespace DotNetNuke.Services.Search.Internals
                     case "module": // module crawler
 
                         // get searchable module definition list
-                        var portalId = int.Parse(cacheItem.CacheKey.Split('-')[1]);
+                        var portalId = int.Parse(cacheItem.CacheKey.Split('-')[1], CultureInfo.InvariantCulture);
                         var modules = ModuleController.Instance.GetSearchModules(portalId);
                         var modDefIds = new HashSet<int>();
 
                         foreach (ModuleInfo module in modules)
                         {
-                            if (!modDefIds.Contains(module.ModuleDefID))
-                            {
-                                modDefIds.Add(module.ModuleDefID);
-                            }
+                            modDefIds.Add(module.ModuleDefID);
                         }
 
                         var list = modDefIds.Select(ModuleDefinitionController.GetModuleDefinitionByID).ToList();
@@ -240,7 +257,7 @@ namespace DotNetNuke.Services.Search.Internals
                     default:
 
                         var resultControllerType = Reflection.CreateType(crawler.SearchResultClass);
-                        var resultController = (BaseResultController)Reflection.CreateObject(resultControllerType);
+                        var resultController = (BaseResultController)Reflection.CreateObject(this.serviceProvider, resultControllerType);
                         var localizedName = Localization.GetSafeJSString(resultController.LocalizedSearchTypeName);
 
                         results.Add(new SearchContentSource
@@ -281,42 +298,89 @@ namespace DotNetNuke.Services.Search.Internals
             if (!string.IsNullOrEmpty(strippedString))
             {
                 // Remove all opening HTML Tags with no attributes
-                strippedString = StripOpeningTagsRegex.Replace(strippedString, emptySpace);
+                try
+                {
+                    strippedString = StripOpeningTagsRegex.Replace(strippedString, emptySpace);
+                }
+                catch (RegexMatchTimeoutException ex)
+                {
+                    DotNetNuke.Services.Exceptions.Exceptions.LogException(ex);
+                    return string.Empty;
+                }
+                catch
+                {
+                    throw;
+                }
 
                 // Remove all closing HTML Tags
-                strippedString = StripClosingTagsRegex.Replace(strippedString, emptySpace);
+                try
+                {
+                    strippedString = StripClosingTagsRegex.Replace(strippedString, emptySpace);
+                }
+                catch (RegexMatchTimeoutException ex)
+                {
+                    DotNetNuke.Services.Exceptions.Exceptions.LogException(ex);
+                    return string.Empty;
+                }
+                catch
+                {
+                    throw;
+                }
             }
 
             if (!string.IsNullOrEmpty(strippedString))
             {
                 var list = new List<string>();
-
-                foreach (var match in HtmlTagsRegex.Matches(strippedString).Cast<Match>())
+                try
                 {
-                    var captures = match.Groups["attr"].Captures;
-                    foreach (var capture in captures.Cast<Capture>())
+                    foreach (var match in HtmlTagsRegex.Matches(strippedString).Cast<Match>())
                     {
-                        var val = capture.Value.Trim();
-                        var pos = val.IndexOf('=');
-                        if (pos > 0)
+                        var captures = match.Groups["attr"].Captures;
+                        foreach (var capture in captures.Cast<Capture>())
                         {
-                            var attr = val.Substring(0, pos).Trim();
-                            if (attributesList.Contains(attr))
+                            var val = capture.Value.Trim();
+                            var pos = val.IndexOf('=');
+                            if (pos > 0)
                             {
-                                var text = AttrTextRegex.Match(val).Groups["text"].Value.Trim();
-                                if (text.Length > 0 && !list.Contains(text))
+                                var attr = val.Substring(0, pos).Trim();
+                                if (attributesList.Contains(attr))
                                 {
-                                    list.Add(text);
+                                    try
+                                    {
+                                        var text = AttrTextRegex.Match(val).Groups["text"].Value.Trim();
+                                        if (text.Length > 0 && !list.Contains(text))
+                                        {
+                                            list.Add(text);
+                                        }
+                                    }
+                                    catch (RegexMatchTimeoutException ex)
+                                    {
+                                        DotNetNuke.Services.Exceptions.Exceptions.LogException(ex);
+                                        return string.Empty;
+                                    }
+                                    catch
+                                    {
+                                        throw;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if (list.Count > 0)
-                    {
-                        strippedString = strippedString.Replace(match.ToString(), string.Join(" ", list));
-                        list.Clear();
+                        if (list.Count > 0)
+                        {
+                            strippedString = strippedString.Replace(match.ToString(), string.Join(" ", list));
+                            list.Clear();
+                        }
                     }
+                }
+                catch (RegexMatchTimeoutException ex)
+                {
+                    DotNetNuke.Services.Exceptions.Exceptions.LogException(ex);
+                    return string.Empty;
+                }
+                catch
+                {
+                    throw;
                 }
             }
 
@@ -332,12 +396,12 @@ namespace DotNetNuke.Services.Search.Internals
         private object SearchDocumentTypeDisplayNameCallBack(CacheItemArgs cacheItem)
         {
             var data = new Dictionary<string, string>();
-            foreach (PortalInfo portal in PortalController.Instance.GetPortals())
+            foreach (IPortalInfo portal in PortalController.Instance.GetPortals())
             {
-                var searchContentSources = this.GetSearchContentSourceList(portal.PortalID);
+                var searchContentSources = this.GetSearchContentSourceList(portal.PortalId);
                 foreach (var searchContentSource in searchContentSources)
                 {
-                    var key = string.Format("{0}-{1}-{2}", searchContentSource.SearchTypeId, searchContentSource.ModuleDefinitionId, Thread.CurrentThread.CurrentCulture);
+                    var key = $"{searchContentSource.SearchTypeId}-{searchContentSource.ModuleDefinitionId}-{Thread.CurrentThread.CurrentCulture}";
                     if (!data.ContainsKey(key))
                     {
                         data.Add(key, searchContentSource.LocalizedName);

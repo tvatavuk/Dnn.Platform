@@ -33,6 +33,7 @@ namespace Dnn.PersonaBar.Security.Services
     using DotNetNuke.Common;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Common.Utils;
+    using DotNetNuke.ContentSecurityPolicy;
     using DotNetNuke.Entities.Host;
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Tabs;
@@ -214,7 +215,7 @@ namespace Dnn.PersonaBar.Security.Services
                     this.hostSettingsService.Update(UserRequestIPHeaderSettingName, request.UserRequestIPHeader, true);
                 }
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -310,12 +311,12 @@ namespace Dnn.PersonaBar.Security.Services
 
                 if ((ipf.IPAddress == "127.0.0.1" || ipf.IPAddress == "localhost" || ipf.IPAddress == "::1" || ipf.IPAddress == "*") && ipf.RuleType == 2)
                 {
-                    return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("CannotDeleteLocalhost.Text", Components.Constants.LocalResourcesFile)));
+                    return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, Localization.GetString("CannotDeleteLocalhost.Text", Components.Constants.LocalResourcesFile));
                 }
 
                 if (IPFilterController.Instance.IsAllowableDeny(HttpContext.Current.Request.UserHostAddress, ipf) == false)
                 {
-                    return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("CannotDeleteIPInUse.Text", Components.Constants.LocalResourcesFile)));
+                    return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, Localization.GetString("CannotDeleteIPInUse.Text", Components.Constants.LocalResourcesFile));
                 }
 
                 if (request.IPFilterID > 0)
@@ -328,7 +329,7 @@ namespace Dnn.PersonaBar.Security.Services
                     IPFilterController.Instance.AddIPFilter(ipf);
                 }
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (ArgumentException exc)
             {
@@ -358,14 +359,14 @@ namespace Dnn.PersonaBar.Security.Services
 
                 if (IPFilterController.Instance.CanIPStillAccess(HttpContext.Current.Request.UserHostAddress, currentWithDeleteRemoved) == false)
                 {
-                    return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("CannotDelete.Text", Components.Constants.LocalResourcesFile)));
+                    return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, Localization.GetString("CannotDelete.Text", Components.Constants.LocalResourcesFile));
                 }
                 else
                 {
                     var ipf = new IPFilterInfo();
                     ipf.IPFilterID = filterId;
                     IPFilterController.Instance.DeleteIPFilter(ipf);
-                    return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                    return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
                 }
             }
             catch (Exception exc)
@@ -430,15 +431,15 @@ namespace Dnn.PersonaBar.Security.Services
                 this.hostSettingsService.Update("EnableStrengthMeter", request.EnableStrengthMeter ? "Y" : "N", false);
                 this.hostSettingsService.Update("EnableIPChecking", request.EnableIPChecking ? "Y" : "N", false);
                 this.hostSettingsService.Update("EnablePasswordHistory", request.EnablePasswordHistory ? "Y" : "N", false);
-                this.hostSettingsService.Update("MembershipResetLinkValidity", request.MembershipResetLinkValidity.ToString(), false);
-                this.hostSettingsService.Update("AdminMembershipResetLinkValidity", request.AdminMembershipResetLinkValidity.ToString(), false);
-                this.hostSettingsService.Update("MembershipNumberPasswords", request.MembershipNumberPasswords.ToString(), false);
-                this.hostSettingsService.Update("MembershipDaysBeforePasswordReuse", request.MembershipDaysBeforePasswordReuse.ToString(), false);
-                this.hostSettingsService.Update("PasswordExpiry", request.PasswordExpiry.ToString());
-                this.hostSettingsService.Update("PasswordExpiryReminder", request.PasswordExpiryReminder.ToString());
+                this.hostSettingsService.Update("MembershipResetLinkValidity", request.MembershipResetLinkValidity.ToString(CultureInfo.InvariantCulture), false);
+                this.hostSettingsService.Update("AdminMembershipResetLinkValidity", request.AdminMembershipResetLinkValidity.ToString(CultureInfo.InvariantCulture), false);
+                this.hostSettingsService.Update("MembershipNumberPasswords", request.MembershipNumberPasswords.ToString(CultureInfo.InvariantCulture), false);
+                this.hostSettingsService.Update("MembershipDaysBeforePasswordReuse", request.MembershipDaysBeforePasswordReuse.ToString(CultureInfo.InvariantCulture), false);
+                this.hostSettingsService.Update("PasswordExpiry", request.PasswordExpiry.ToString(CultureInfo.InvariantCulture));
+                this.hostSettingsService.Update("PasswordExpiryReminder", request.PasswordExpiryReminder.ToString(CultureInfo.InvariantCulture));
                 this.hostSettingsService.Update("ForceLogoutAfterPasswordChanged", request.ForceLogoutAfterPasswordChanged ? "Y" : "N", false);
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -572,11 +573,11 @@ namespace Dnn.PersonaBar.Security.Services
             {
                 var setting = request.RegistrationFields;
                 PortalController.UpdatePortalSetting(this.PortalId, "Registration_RegistrationFields", setting);
-                PortalController.UpdatePortalSetting(this.PortalId, "Registration_RegistrationFormType", request.RegistrationFormType.ToString(), false);
+                PortalController.UpdatePortalSetting(this.PortalId, "Registration_RegistrationFormType", request.RegistrationFormType.ToString(CultureInfo.InvariantCulture), false);
                 PortalController.UpdatePortalSetting(this.PortalId, "Registration_UseEmailAsUserName", request.UseEmailAsUsername.ToString(), false);
 
                 var portalInfo = PortalController.Instance.GetPortal(this.PortalId);
-                portalInfo.UserRegistration = Convert.ToInt32(request.UserRegistration);
+                portalInfo.UserRegistration = Convert.ToInt32(request.UserRegistration, CultureInfo.InvariantCulture);
                 PortalController.Instance.UpdatePortalInfo(portalInfo);
 
                 PortalController.UpdatePortalSetting(this.PortalId, "EnableRegisterNotification", request.EnableRegisterNotification.ToString(), false);
@@ -594,7 +595,7 @@ namespace Dnn.PersonaBar.Security.Services
                 PortalController.UpdatePortalSetting(this.PortalId, "Security_RequireValidProfile", request.RequireValidProfile.ToString(), false);
                 PortalController.UpdatePortalSetting(this.PortalId, "Security_CaptchaRegister", request.UseCaptchaRegister.ToString(), false);
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -629,7 +630,7 @@ namespace Dnn.PersonaBar.Security.Services
                         break;
                 }
 
-                PortalController.UpdatePortalSetting(this.PortalId, "SSLSetup", request.SSLSetup.ToString(), false);
+                PortalController.UpdatePortalSetting(this.PortalId, "SSLSetup", request.SSLSetup.ToString(CultureInfo.InvariantCulture), false);
                 PortalController.UpdatePortalSetting(this.PortalId, "SSLEnforced", request.SSLEnforced.ToString(), false);
                 PortalController.UpdatePortalSetting(this.PortalId, "SSLURL", this.AddPortalAlias(request.SSLURL, this.PortalId), false);
                 PortalController.UpdatePortalSetting(this.PortalId, "STDURL", this.AddPortalAlias(request.STDURL, this.PortalId), false);
@@ -641,7 +642,7 @@ namespace Dnn.PersonaBar.Security.Services
 
                 DataCache.ClearPortalCache(this.PortalId, false);
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -661,7 +662,7 @@ namespace Dnn.PersonaBar.Security.Services
             try
             {
                 DotNetNuke.Data.DataProvider.Instance().SetAllPortalTabsSecure(this.PortalId, true);
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -679,15 +680,11 @@ namespace Dnn.PersonaBar.Security.Services
         {
             try
             {
-                var plartformVersion = System.Reflection.Assembly.LoadFrom(this.applicationStatusInfo.ApplicationMapPath + @"\bin\DotNetNuke.dll").GetName().Version;
-                string sRequest = string.Format(
-                    "https://dnnplatform.io/security.aspx?type={0}&name={1}&version={2}",
-                    DotNetNukeContext.Current.Application.Type,
-                    "DNNCORP.CE",
-                    Globals.FormatVersion(plartformVersion, "00", 3, string.Empty));
+                var platformVersion = System.Reflection.Assembly.LoadFrom(this.applicationStatusInfo.ApplicationMapPath + @"\bin\DotNetNuke.dll").GetName().Version;
+                string sRequest = $"https://dnnplatform.io/security.aspx?type={DotNetNukeContext.Current.Application.Type}&name=DNNCORP.CE&version={Globals.FormatVersion(platformVersion, "00", 3, string.Empty)}";
 
                 // format for display with "." delimiter
-                string sVersion = Globals.FormatVersion(plartformVersion, "00", 3, ".");
+                string sVersion = Globals.FormatVersion(platformVersion, "00", 3, ".");
 
                 // make remote request
                 Stream oStream = null;
@@ -701,9 +698,9 @@ namespace Dnn.PersonaBar.Security.Services
                 catch (Exception oExc)
                 {
                     // connectivity issues
-                    if (PortalSecurity.IsInRoles(this.PortalSettings.AdministratorRoleId.ToString()))
+                    if (PortalSecurity.IsInRoles(this.PortalSettings.AdministratorRoleId.ToString(CultureInfo.InvariantCulture)))
                     {
-                        return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(Localization.GetString("RequestFailed_Admin.Text", Components.Constants.LocalResourcesFile), sRequest));
+                        return this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format(CultureInfo.CurrentCulture, Localization.GetString("RequestFailed_Admin.Text", Components.Constants.LocalResourcesFile), sRequest));
                     }
                     else
                     {
@@ -713,10 +710,13 @@ namespace Dnn.PersonaBar.Security.Services
 
                 // load XML document
                 StreamReader oReader = new StreamReader(oStream);
-                XmlDocument oDoc = new XmlDocument { XmlResolver = null };
-                oDoc.LoadXml(oReader.ReadToEnd());
+                XmlDocument oDoc = new XmlDocument { XmlResolver = null, };
+                using (var xmlReader = XmlReader.Create(new StringReader(oReader.ReadToEnd()), new XmlReaderSettings { XmlResolver = null, }))
+                {
+                    oDoc.Load(xmlReader);
+                }
 
-                List<object> items = new List<object>();
+                List<object> items = [];
                 foreach (XmlNode selectNode in oDoc.SelectNodes(BULLETINXMLNODEPATH))
                 {
                     items.Add(new
@@ -804,8 +804,8 @@ namespace Dnn.PersonaBar.Security.Services
                 this.hostSettingsService.Update("RememberCheckbox", request.RememberCheckbox ? "Y" : "N", false);
                 this.hostSettingsService.Update("AllowOverrideThemeViaQueryString", request.AllowOverrideThemeViaQueryString ? "Y" : "N", false);
                 this.hostSettingsService.Update("AllowRichTextModuleTitle", request.AllowRichTextModuleTitle ? "Y" : "N", false);
-                this.hostSettingsService.Update("AutoAccountUnlockDuration", request.AutoAccountUnlockDuration.ToString(), false);
-                this.hostSettingsService.Update("AsyncTimeout", request.AsyncTimeout.ToString(), false);
+                this.hostSettingsService.Update("AutoAccountUnlockDuration", request.AutoAccountUnlockDuration.ToString(CultureInfo.InvariantCulture), false);
+                this.hostSettingsService.Update("AsyncTimeout", request.AsyncTimeout.ToString(CultureInfo.InvariantCulture), false);
                 var oldExtensionList = this.hostSettings.AllowedExtensionAllowList.ToStorageString();
                 var fileExtensions = new FileExtensionWhitelist(request.AllowedExtensionWhitelist);
                 var newExtensionList = fileExtensions.ToStorageString();
@@ -828,7 +828,7 @@ namespace Dnn.PersonaBar.Security.Services
 
                 DataCache.ClearCache();
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -1017,43 +1017,43 @@ namespace Dnn.PersonaBar.Security.Services
                 var portalSettings = (from DataRow dr in settings[0].Rows
                                       select new SettingsDto
                                       {
-                                          PortalId = Convert.ToInt32(dr["PortalID"] != DBNull.Value ? dr["PortalID"] : Null.NullInteger),
-                                          SettingName = Convert.ToString(dr["SettingName"]),
-                                          SettingValue = Convert.ToString(dr["SettingValue"]),
-                                          LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"]),
-                                          LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"])),
+                                          PortalId = Convert.ToInt32(dr["PortalID"] != DBNull.Value ? dr["PortalID"] : Null.NullInteger, CultureInfo.InvariantCulture),
+                                          SettingName = Convert.ToString(dr["SettingName"], CultureInfo.InvariantCulture),
+                                          SettingValue = Convert.ToString(dr["SettingValue"], CultureInfo.InvariantCulture),
+                                          LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"], CultureInfo.InvariantCulture),
+                                          LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"], CultureInfo.InvariantCulture)),
                                       }).ToList();
 
                 var hostSettings = (from DataRow dr in settings[1].Rows
                                     select new SettingsDto
                                     {
-                                        SettingName = Convert.ToString(dr["SettingName"]),
-                                        SettingValue = Convert.ToString(dr["SettingValue"]),
-                                        LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"]),
-                                        LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"])),
+                                        SettingName = Convert.ToString(dr["SettingName"], CultureInfo.InvariantCulture),
+                                        SettingValue = Convert.ToString(dr["SettingValue"], CultureInfo.InvariantCulture),
+                                        LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"], CultureInfo.InvariantCulture),
+                                        LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"], CultureInfo.InvariantCulture)),
                                     }).ToList();
 
                 var tabSettings = (from DataRow dr in settings[2].Rows
                                    select new SettingsDto
                                    {
-                                       TabId = Convert.ToInt32(dr["TabID"]),
-                                       PortalId = Convert.ToInt32(dr["PortalID"] != DBNull.Value ? dr["PortalID"] : Null.NullInteger),
-                                       SettingName = Convert.ToString(dr["SettingName"]),
-                                       SettingValue = Convert.ToString(dr["SettingValue"]),
-                                       LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"]),
-                                       LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"])),
+                                       TabId = Convert.ToInt32(dr["TabID"], CultureInfo.InvariantCulture),
+                                       PortalId = Convert.ToInt32(dr["PortalID"] != DBNull.Value ? dr["PortalID"] : Null.NullInteger, CultureInfo.InvariantCulture),
+                                       SettingName = Convert.ToString(dr["SettingName"], CultureInfo.InvariantCulture),
+                                       SettingValue = Convert.ToString(dr["SettingValue"], CultureInfo.InvariantCulture),
+                                       LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"], CultureInfo.InvariantCulture),
+                                       LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"], CultureInfo.InvariantCulture)),
                                    }).ToList();
 
                 var moduleSettings = (from DataRow dr in settings[3].Rows
                                       select new SettingsDto
                                       {
-                                          ModuleId = Convert.ToInt32(dr["ModuleID"]),
-                                          PortalId = Convert.ToInt32(dr["PortalID"] != DBNull.Value ? dr["PortalID"] : Null.NullInteger),
-                                          Type = Convert.ToString(dr["Type"]),
-                                          SettingName = Convert.ToString(dr["SettingName"]),
-                                          SettingValue = Convert.ToString(dr["SettingValue"]),
-                                          LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"]),
-                                          LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"])),
+                                          ModuleId = Convert.ToInt32(dr["ModuleID"], CultureInfo.InvariantCulture),
+                                          PortalId = Convert.ToInt32(dr["PortalID"] != DBNull.Value ? dr["PortalID"] : Null.NullInteger, CultureInfo.InvariantCulture),
+                                          Type = Convert.ToString(dr["Type"], CultureInfo.InvariantCulture),
+                                          SettingName = Convert.ToString(dr["SettingName"], CultureInfo.InvariantCulture),
+                                          SettingValue = Convert.ToString(dr["SettingValue"], CultureInfo.InvariantCulture),
+                                          LastModifiedByUserId = Convert.ToInt32(dr["LastModifiedByUserID"], CultureInfo.InvariantCulture),
+                                          LastModifiedOnDate = DisplayDate(Convert.ToDateTime(dr["LastModifiedOnDate"], CultureInfo.InvariantCulture)),
                                       }).ToList();
 
                 var response = new
@@ -1143,7 +1143,7 @@ namespace Dnn.PersonaBar.Security.Services
                     }
                 }
 
-                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true, });
             }
             catch (Exception exc)
             {
@@ -1411,6 +1411,112 @@ namespace Dnn.PersonaBar.Security.Services
             this.apiTokenController.DeleteExpiredAndRevokedApiTokens(portalId, userId);
 
             return this.Request.CreateResponse(HttpStatusCode.OK, true);
+        }
+
+        /// GET: api/Security/GetCspSettings
+        /// <summary>Gets CSP settings.</summary>
+        /// <returns>CSP settings.</returns>
+        [HttpGet]
+        [RequireAdmin]
+        public HttpResponseMessage GetCspSettings()
+        {
+            try
+            {
+                _ = bool.TryParse(Config.GetSetting("DisableCsp"), out bool disableCsp);
+
+                var response = new
+                {
+                    Success = true,
+                    Results = new
+                    {
+                        Settings = new
+                        {
+                            this.PortalSettings.CspHeaderMode,
+                            this.PortalSettings.CspHeaderFixed,
+                            this.PortalSettings.CspHeader,
+                            this.PortalSettings.CspReportingHeader,
+                            CspDisabled = disableCsp,
+                        },
+                    },
+                };
+
+                return this.Request.CreateResponse(HttpStatusCode.OK, response);
+            }
+            catch (Exception exc)
+            {
+                Logger.Error(exc);
+                return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
+            }
+        }
+
+        /// POST: api/Security/UpdateCspSettings
+        /// <summary>Updates CSP settings.</summary>
+        /// <param name="request">The CSP settings.</param>
+        /// <returns>CSP settings.</returns>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequireAdmin]
+        public HttpResponseMessage UpdateCspSettings(UpdateCspSettingsRequest request)
+        {
+            try
+            {
+                var policy = new ContentSecurityPolicy(true);
+                var parser = new ContentSecurityPolicyParser(policy);
+                try
+                {
+                    parser.Parse(request.CspHeader);
+                }
+                catch (Exception ex)
+                {
+                    return this.Request.CreateResponse(HttpStatusCode.OK, new
+                    {
+                        Success = false,
+                        Message = "Bad CspHeader - " + ex.Message,
+                        Error = new
+                        {
+                            CspHeader = true,
+                            CspHeaderErrors = new[] { ex.Message },
+                            CspReportingHeader = false,
+                            CspReportingHeaderErrors = Array.Empty<string>(),
+                        },
+                    });
+                }
+
+                if (!string.IsNullOrEmpty(request.CspReportingHeader))
+                {
+                    try
+                    {
+                        policy.AddReportEndpointHeader(request.CspReportingHeader);
+                    }
+                    catch (Exception ex)
+                    {
+                        return this.Request.CreateResponse(HttpStatusCode.OK, new
+                        {
+                            Success = false,
+                            Message = "Bad CspReportingHeader - " + ex.Message,
+                            Error = new
+                            {
+                                CspHeader = false,
+                                CspHeaderErrors = Array.Empty<string>(),
+                                CspReportingHeader = true,
+                                CspReportingHeaderErrors = new[] { ex.Message },
+                            },
+                        });
+                    }
+                }
+
+                PortalController.UpdatePortalSetting(this.PortalId, "CspHeaderMode", request.CspHeaderMode.ToString().ToUpperInvariant());
+                PortalController.UpdatePortalSetting(this.PortalId, "CspHeaderFixed", request.CspHeaderFixed.ToString().ToUpperInvariant());
+                PortalController.UpdatePortalSetting(this.PortalId, "CspHeader", request.CspHeader);
+                PortalController.UpdatePortalSetting(this.PortalId, "CspReportingHeader", request.CspReportingHeader);
+
+                return this.Request.CreateResponse(HttpStatusCode.OK, new { Success = true });
+            }
+            catch (Exception exc)
+            {
+                Logger.Error(exc);
+                return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
+            }
         }
 
         /// <summary>

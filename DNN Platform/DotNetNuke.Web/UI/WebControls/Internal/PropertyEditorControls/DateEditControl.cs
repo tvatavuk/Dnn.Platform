@@ -8,25 +8,21 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
     using System.Data.SqlTypes;
     using System.Globalization;
     using System.Web.UI;
+    using System.Web.UI.WebControls;
 
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Instrumentation;
     using DotNetNuke.UI.WebControls;
 
-    /// <summary>
-    /// The DateEditControl control provides a standard UI component for editing
-    /// date properties.
-    /// </summary>
-    /// <remarks>
-    /// This control is only for internal use, please don't reference it in any other place as it may be removed in future.
-    /// </remarks>
+    /// <summary>The DateEditControl control provides a standard UI component for editing date properties.</summary>
+    /// <remarks>This control is only for internal use, please don't reference it in any other place as it may be removed in the future.</remarks>
     [ToolboxData("<{0}:DateEditControl runat=server></{0}:DateEditControl>")]
     public class DateEditControl : EditControl
     {
         private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(DateEditControl));
-        private DnnDatePicker dateControl;
+        private TextBox dateControl;
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override string EditControlClientId
         {
             get
@@ -36,18 +32,11 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override string ID
         {
-            get
-            {
-                return base.ID + "_control";
-            }
-
-            set
-            {
-                base.ID = value;
-            }
+            get => base.ID + "_control";
+            set => base.ID = value;
         }
 
         /// <summary>Gets dateValue returns the Date representation of the Value.</summary>
@@ -59,7 +48,7 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
                 DateTime dteValue = Null.NullDate;
                 try
                 {
-                    var dteString = Convert.ToString(this.Value);
+                    var dteString = Convert.ToString(this.Value, CultureInfo.InvariantCulture);
                     DateTime.TryParse(dteString, CultureInfo.InvariantCulture, DateTimeStyles.None, out dteValue);
                 }
                 catch (Exception exc)
@@ -77,13 +66,7 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
         /// </summary>
         /// <value>A String representing the default format to use to render the date.</value>
         /// <returns>A Format String.</returns>
-        protected virtual string DefaultFormat
-        {
-            get
-            {
-                return "d";
-            }
-        }
+        protected virtual string DefaultFormat => "d";
 
         /// <summary>Gets format is a string that will be used to format the date in View mode.</summary>
         /// <value>A String representing the format to use to render the date.</value>
@@ -143,7 +126,7 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
                 string stringValue = Null.NullString;
                 if (this.DateValue.ToUniversalTime().Date != (DateTime)SqlDateTime.MinValue && this.DateValue != Null.NullDate)
                 {
-                    stringValue = this.DateValue.ToString(this.Format);
+                    stringValue = this.DateValue.ToString(this.Format, CultureInfo.InvariantCulture);
                 }
 
                 return stringValue;
@@ -151,24 +134,13 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
 
             set
             {
-                this.Value = DateTime.Parse(value);
+                this.Value = DateTime.Parse(value, CultureInfo.InvariantCulture);
             }
         }
 
-        private DnnDatePicker DateControl
-        {
-            get
-            {
-                if (this.dateControl == null)
-                {
-                    this.dateControl = new DnnDatePicker();
-                }
+        private TextBox DateControl => this.dateControl ??= new TextBox { TextMode = TextBoxMode.Date, };
 
-                return this.dateControl;
-            }
-        }
-
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public override bool LoadPostData(string postDataKey, NameValueCollection postCollection)
         {
             this.EnsureChildControls();
@@ -184,7 +156,7 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
                 }
                 else
                 {
-                    this.Value = DateTime.Parse(postedValue).ToString(CultureInfo.InvariantCulture);
+                    this.Value = DateTime.Parse(postedValue, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
                     dataChanged = true;
                 }
             }
@@ -193,7 +165,7 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
             return dataChanged;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void CreateChildControls()
         {
             base.CreateChildControls();
@@ -204,11 +176,12 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
             this.Controls.Add(this.DateControl);
         }
 
+        /// <summary>Loads the date controls.</summary>
         protected virtual void LoadDateControls()
         {
             if (this.DateValue != Null.NullDate)
             {
-                this.DateControl.SelectedDate = this.DateValue.Date;
+                this.DateControl.Text = this.DateValue.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             }
         }
 
@@ -223,7 +196,7 @@ namespace DotNetNuke.Web.UI.WebControls.Internal.PropertyEditorControls
             this.OnValueChanged(args);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void OnPreRender(EventArgs e)
         {
             base.OnPreRender(e);

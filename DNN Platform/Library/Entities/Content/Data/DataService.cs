@@ -5,13 +5,13 @@ namespace DotNetNuke.Entities.Content.Data
 {
     using System.Collections.Generic;
     using System.Data;
+    using System.Diagnostics.CodeAnalysis;
 
     using DotNetNuke.Data;
-    using DotNetNuke.Entities.Content.Common;
     using DotNetNuke.Entities.Content.Taxonomy;
 
     /// <summary>Persistent data of content with DataProvider instance.</summary>
-    /// <remarks>It's better to use <see cref="Util.GetDataService"/> instead of create new instance directly.</remarks>
+    /// <remarks>It's better to request <see cref="IDataService"/> via Dependency Injection instead of creating a new instance directly.</remarks>
     /// <example>
     /// <code lang="C#">
     /// public ContentController() : this(Util.GetDataService())
@@ -124,6 +124,7 @@ namespace DotNetNuke.Entities.Content.Data
         /// <summary>Updates the content item.</summary>
         /// <param name="contentItem">The content item.</param>
         /// <param name="createdByUserId">The created by user id.</param>
+        [SuppressMessage("Microsoft.Naming", "CA1725:ParameterNamesShouldMatchBaseDeclaration", Justification = "Breaking change")]
         public void UpdateContentItem(ContentItem contentItem, int createdByUserId)
         {
             this.provider.ExecuteNonQuery(
@@ -148,7 +149,7 @@ namespace DotNetNuke.Entities.Content.Data
             this.provider.ExecuteNonQuery("AddMetaData", contentItem.ContentItemId, name, value);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void SynchronizeMetaData(ContentItem contentItem, IEnumerable<KeyValuePair<string, string>> added, IEnumerable<KeyValuePair<string, string>> deleted)
         {
 #if false
@@ -217,7 +218,7 @@ namespace DotNetNuke.Entities.Content.Data
             return this.provider.ExecuteScalar<int>("AddContentType", contentType.ContentType);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void DeleteContentType(ContentType contentType)
         {
             this.provider.ExecuteNonQuery("DeleteContentType", contentType.ContentTypeId);
@@ -284,7 +285,7 @@ namespace DotNetNuke.Entities.Content.Data
             return this.provider.ExecuteScalar<int>("AddSimpleTerm", term.VocabularyId, term.Name, term.Description, term.Weight, createdByUserId);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         public void AddTermToContent(Term term, ContentItem contentItem)
         {
             this.provider.ExecuteNonQuery("AddTermToContent", term.TermId, contentItem.ContentItemId);

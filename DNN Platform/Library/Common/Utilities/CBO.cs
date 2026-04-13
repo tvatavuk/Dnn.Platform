@@ -7,6 +7,7 @@ namespace DotNetNuke.Common.Utilities
     using System.Collections;
     using System.Collections.Generic;
     using System.Data;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -121,7 +122,7 @@ namespace DotNetNuke.Common.Utilities
 
         /// <summary>CreateObject creates a new object of Type TObject.</summary>
         /// <typeparam name="TObject">The type of object to create.</typeparam>
-        /// <param name="initialise">A flag that indicates whether to initialise the object (i.e. set all properties to <see langword="null"/>).</param>
+        /// <param name="initialise">A flag that indicates whether to initialize the object (i.e. set all properties to <see langword="null"/>).</param>
         /// <returns>The created object.</returns>
         public static TObject CreateObject<TObject>(bool initialise)
         {
@@ -130,22 +131,27 @@ namespace DotNetNuke.Common.Utilities
 
         public static TObject DeserializeObject<TObject>(string fileName)
         {
-            return DeserializeObject<TObject>(XmlReader.Create(new FileStream(fileName, FileMode.Open, FileAccess.Read)));
+            using var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+            using var xmlReader = XmlReader.Create(fileStream);
+            return DeserializeObject<TObject>(xmlReader);
         }
 
         public static TObject DeserializeObject<TObject>(XmlDocument document)
         {
-            return DeserializeObject<TObject>(XmlReader.Create(new StringReader(document.OuterXml)));
+            using var xmlReader = XmlReader.Create(new StringReader(document.OuterXml));
+            return DeserializeObject<TObject>(xmlReader);
         }
 
         public static TObject DeserializeObject<TObject>(Stream stream)
         {
-            return DeserializeObject<TObject>(XmlReader.Create(stream));
+            using var xmlReader = XmlReader.Create(stream);
+            return DeserializeObject<TObject>(xmlReader);
         }
 
         public static TObject DeserializeObject<TObject>(TextReader reader)
         {
-            return DeserializeObject<TObject>(XmlReader.Create(reader));
+            using var xmlReader = XmlReader.Create(reader);
+            return DeserializeObject<TObject>(xmlReader);
         }
 
         public static TObject DeserializeObject<TObject>(XmlReader reader)
@@ -478,7 +484,7 @@ namespace DotNetNuke.Common.Utilities
         }
 
         /// <summary>InitializeObject initialises all the properties of an object to their <see langword="null"/> Values.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
+        /// <param name="objObject">The object to Initialize.</param>
         public static void InitializeObject(object objObject)
         {
             // initialize properties
@@ -492,7 +498,7 @@ namespace DotNetNuke.Common.Utilities
         }
 
         /// <summary>InitializeObject initialises all the properties of an object to their <see langword="null"/> Values.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
+        /// <param name="objObject">The object to Initialize.</param>
         /// <param name="objType">The type of the object.</param>
         /// <returns><paramref name="objObject"/>.</returns>
         public static object InitializeObject(object objObject, Type objType)
@@ -510,67 +516,58 @@ namespace DotNetNuke.Common.Utilities
         }
 
         /// <summary>SerializeObject serializes an Object.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
-        /// <param name="fileName">A filename for the resulting serialized xml.</param>
+        /// <param name="objObject">The object to initialize.</param>
+        /// <param name="fileName">A filename for the resulting serialized XML.</param>
         public static void SerializeObject(object objObject, string fileName)
         {
-            using (
-                XmlWriter writer = XmlWriter.Create(fileName, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Fragment)))
-            {
-                SerializeObject(objObject, writer);
-                writer.Flush();
-            }
+            using var writer = XmlWriter.Create(fileName, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Fragment));
+            SerializeObject(objObject, writer);
+            writer.Flush();
         }
 
         /// <summary>SerializeObject serializes an Object.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
+        /// <param name="objObject">The object to initialize.</param>
         /// <param name="document">An XmlDocument to serialize to.</param>
         public static void SerializeObject(object objObject, XmlDocument document)
         {
             var sb = new StringBuilder();
-            using (var writer = XmlWriter.Create(sb, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Document)))
-            {
-                // Serialize the object
-                SerializeObject(objObject, writer);
+            using var writer = XmlWriter.Create(sb, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Document));
 
-                // Load XmlDocument
-                document.LoadXml(sb.ToString());
-            }
+            // Serialize the object
+            SerializeObject(objObject, writer);
+
+            // Load XmlDocument
+            using var xmlReader = XmlReader.Create(new StringReader(sb.ToString()), new XmlReaderSettings { XmlResolver = null, });
+            document.Load(xmlReader);
         }
 
         /// <summary>SerializeObject serializes an Object.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
+        /// <param name="objObject">The object to initialize.</param>
         /// <param name="stream">A Stream to serialize to.</param>
         public static void SerializeObject(object objObject, Stream stream)
         {
-            using (XmlWriter writer = XmlWriter.Create(stream, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Fragment)))
-            {
-                SerializeObject(objObject, writer);
-                writer.Flush();
-            }
+            using var writer = XmlWriter.Create(stream, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Fragment));
+            SerializeObject(objObject, writer);
+            writer.Flush();
         }
 
         /// <summary>SerializeObject serializes an Object.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
+        /// <param name="objObject">The object to Initialize.</param>
         /// <param name="textWriter">A TextWriter to serialize to.</param>
         public static void SerializeObject(object objObject, TextWriter textWriter)
         {
-            using (
-                XmlWriter writer = XmlWriter.Create(textWriter, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Fragment)))
-            {
-                SerializeObject(objObject, writer);
-                writer.Flush();
-            }
+            using var writer = XmlWriter.Create(textWriter, XmlUtils.GetXmlWriterSettings(ConformanceLevel.Fragment));
+            SerializeObject(objObject, writer);
+            writer.Flush();
         }
 
         /// <summary>SerializeObject serializes an Object.</summary>
-        /// <param name="objObject">The object to Initialise.</param>
+        /// <param name="objObject">The object to Initialize.</param>
         /// <param name="writer">An XmlWriter to serialize to.</param>
         public static void SerializeObject(object objObject, XmlWriter writer)
         {
             // Try to cast the Object as IXmlSerializable
-            var xmlSerializableObject = objObject as IXmlSerializable;
-            if (xmlSerializableObject == null)
+            if (objObject is not IXmlSerializable xmlSerializableObject)
             {
                 // Use XmlSerializer
                 var serializer = new XmlSerializer(objObject.GetType());
@@ -583,25 +580,25 @@ namespace DotNetNuke.Common.Utilities
             }
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         List<TItem> ICBO.FillCollection<TItem>(IDataReader dr)
         {
             return (List<TItem>)FillListFromReader(dr, new List<TItem>(), true);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         TObject ICBO.FillObject<TObject>(IDataReader dr)
         {
             return (TObject)CreateObjectFromReader(typeof(TObject), dr, true);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         TObject ICBO.GetCachedObject<TObject>(CacheItemArgs cacheItemArgs, CacheItemExpiredCallback cacheItemExpired, bool saveInDictionary)
         {
             return DataCache.GetCachedData<TObject>(this.hostSettings.PerformanceSetting, cacheItemArgs, cacheItemExpired, saveInDictionary);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override Func<ICBO> GetFactory()
         {
             return () => Globals.GetCurrentServiceProvider().GetRequiredService<ICBO>();
@@ -680,26 +677,26 @@ namespace DotNetNuke.Common.Utilities
                 {
                     // Create the Object
                     objObject = (TValue)CreateObjectFromReader(typeof(TValue), dr, false);
-                    if (keyField == "KeyID" && objObject is IHydratable)
+                    if (keyField == "KeyID" && objObject is IHydratable hydratable)
                     {
                         // Get the value of the key field from the KeyID
-                        keyValue = (TKey)Null.SetNull(((IHydratable)objObject).KeyID, keyValue);
+                        keyValue = (TKey)Null.SetNull(hydratable.KeyID, keyValue);
                     }
                     else
                     {
                         // Get the value of the key field from the DataReader
                         if (typeof(TKey).Name == "Int32" && dr[keyField].GetType().Name == "Decimal")
                         {
-                            keyValue = (TKey)Convert.ChangeType(Null.SetNull(dr[keyField], keyValue), typeof(TKey));
+                            keyValue = (TKey)Convert.ChangeType(Null.SetNull(dr[keyField], keyValue), typeof(TKey), CultureInfo.InvariantCulture);
                         }
                         else if (typeof(TKey).Name.Equals("string", StringComparison.OrdinalIgnoreCase) &&
                                  dr[keyField].GetType().Name.Equals("dbnull", StringComparison.OrdinalIgnoreCase))
                         {
-                            keyValue = (TKey)Convert.ChangeType(Null.SetNull(dr[keyField], string.Empty), typeof(TKey));
+                            keyValue = (TKey)Convert.ChangeType(Null.SetNull(dr[keyField], string.Empty), typeof(TKey), CultureInfo.InvariantCulture);
                         }
                         else
                         {
-                            keyValue = (TKey)Convert.ChangeType(Null.SetNull(dr[keyField], string.Empty), typeof(TKey));
+                            keyValue = (TKey)Convert.ChangeType(Null.SetNull(dr[keyField], string.Empty), typeof(TKey), CultureInfo.InvariantCulture);
                         }
                     }
 
@@ -796,14 +793,9 @@ namespace DotNetNuke.Common.Utilities
             try
             {
                 // Determine if object is IHydratable
-                if (objObject is IHydratable)
+                if (objObject is IHydratable objHydratable)
                 {
-                    // Use IHydratable's Fill
-                    var objHydratable = objObject as IHydratable;
-                    if (objHydratable != null)
-                    {
-                        objHydratable.Fill(dr);
-                    }
+                    objHydratable.Fill(dr);
                 }
                 else
                 {
@@ -829,16 +821,16 @@ namespace DotNetNuke.Common.Utilities
         {
             PropertyInfo objPropertyInfo = null;
             Type propType = null;
-            object coloumnValue;
+            object columnValue;
             Type objDataType;
             int intIndex;
 
             // get cached object mapping for type
             ObjectMappingInfo objMappingInfo = GetObjectMapping(hydratedObject.GetType());
-            if (hydratedObject is BaseEntityInfo && !(hydratedObject is ScheduleItem))
+            if (hydratedObject is BaseEntityInfo info and not ScheduleItem)
             {
                 // Call the base classes fill method to populate base class properties
-                ((BaseEntityInfo)hydratedObject).FillBaseProperties(dr);
+                info.FillBaseProperties(dr);
             }
 
             // fill object with values from datareader
@@ -854,19 +846,19 @@ namespace DotNetNuke.Common.Utilities
                     if (objPropertyInfo.CanWrite)
                     {
                         // Get the Data Value from the data reader
-                        coloumnValue = dr.GetValue(intIndex);
+                        columnValue = dr.GetValue(intIndex);
 
                         // Get the Data Value's type
-                        objDataType = coloumnValue.GetType();
-                        if (coloumnValue == null || coloumnValue == DBNull.Value)
+                        objDataType = columnValue.GetType();
+                        if (columnValue == DBNull.Value)
                         {
                             // set property value to Null
                             objPropertyInfo.SetValue(hydratedObject, Null.SetNull(objPropertyInfo), null);
                         }
-                        else if (propType.Equals(objDataType))
+                        else if (propType == objDataType)
                         {
                             // Property and data objects are the same type
-                            objPropertyInfo.SetValue(hydratedObject, coloumnValue, null);
+                            objPropertyInfo.SetValue(hydratedObject, columnValue, null);
                         }
                         else
                         {
@@ -875,38 +867,38 @@ namespace DotNetNuke.Common.Utilities
                             if (propType.BaseType.Equals(typeof(Enum)))
                             {
                                 // check if value is numeric and if not convert to integer ( supports databases like Oracle )
-                                if (Globals.NumberMatchRegex.IsMatch(coloumnValue.ToString()))
+                                if (Globals.NumberMatchRegex.IsMatch(columnValue.ToString()))
                                 {
                                     objPropertyInfo.SetValue(
                                         hydratedObject,
-                                        Enum.ToObject(propType, Convert.ToInt32(coloumnValue)),
+                                        Enum.ToObject(propType, Convert.ToInt32(columnValue, CultureInfo.InvariantCulture)),
                                         null);
                                 }
                                 else
                                 {
-                                    objPropertyInfo.SetValue(hydratedObject, Enum.ToObject(propType, coloumnValue), null);
+                                    objPropertyInfo.SetValue(hydratedObject, Enum.ToObject(propType, columnValue), null);
                                 }
                             }
                             else if (propType == typeof(Guid))
                             {
-                                // guid is not a datatype common across all databases ( ie. Oracle )
+                                // guid is not a datatype common across all databases (e.g. Oracle)
                                 objPropertyInfo.SetValue(
                                     hydratedObject,
-                                    Convert.ChangeType(new Guid(coloumnValue.ToString()), propType),
+                                    Convert.ChangeType(new Guid(columnValue.ToString()), propType, CultureInfo.InvariantCulture),
                                     null);
                             }
                             else if (propType == typeof(Version))
                             {
-                                objPropertyInfo.SetValue(hydratedObject, new Version(coloumnValue.ToString()), null);
+                                objPropertyInfo.SetValue(hydratedObject, new Version(columnValue.ToString()), null);
                             }
-                            else if (coloumnValue is IConvertible)
+                            else if (columnValue is IConvertible)
                             {
-                                objPropertyInfo.SetValue(hydratedObject, ChangeType(coloumnValue, propType), null);
+                                objPropertyInfo.SetValue(hydratedObject, ChangeType(columnValue, propType, CultureInfo.InvariantCulture), null);
                             }
                             else
                             {
                                 // try explicit conversion
-                                objPropertyInfo.SetValue(hydratedObject, coloumnValue, null);
+                                objPropertyInfo.SetValue(hydratedObject, columnValue, null);
                             }
                         }
                     }
@@ -914,7 +906,7 @@ namespace DotNetNuke.Common.Utilities
             }
         }
 
-        private static object ChangeType(object obj, Type type)
+        private static object ChangeType(object obj, Type type, IFormatProvider formatProvider)
         {
             Type u = Nullable.GetUnderlyingType(type);
 
@@ -925,10 +917,10 @@ namespace DotNetNuke.Common.Utilities
                     return GetDefault(type);
                 }
 
-                return Convert.ChangeType(obj, u);
+                return Convert.ChangeType(obj, u, formatProvider);
             }
 
-            return Convert.ChangeType(obj, type);
+            return Convert.ChangeType(obj, type, formatProvider);
         }
 
         private static object GetDefault(Type type)
@@ -978,8 +970,7 @@ namespace DotNetNuke.Common.Utilities
 
         private static string GetPrimaryKey(Type objType)
         {
-            string primaryKey = DefaultPrimaryKey;
-            return primaryKey;
+            return DefaultPrimaryKey;
         }
 
         private static string GetTableName(Type objType)
@@ -990,7 +981,7 @@ namespace DotNetNuke.Common.Utilities
             if (string.IsNullOrEmpty(tableName))
             {
                 tableName = objType.Name;
-                if (tableName.EndsWith("Info"))
+                if (tableName.EndsWith("Info", StringComparison.Ordinal))
                 {
                     // Remove Info ending
                     tableName = tableName.Replace("Info", string.Empty);

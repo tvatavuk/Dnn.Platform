@@ -5,22 +5,30 @@
 namespace DotNetNuke.Modules.Admin.Security
 {
     using System;
-    using System.Collections;
-    using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.Globalization;
     using System.Web.UI.WebControls;
 
+    using DotNetNuke.Abstractions.Application;
+    using DotNetNuke.Common.Lists;
     using DotNetNuke.Common.Utilities;
     using DotNetNuke.Entities.Modules;
-    using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Users;
     using DotNetNuke.Security.Roles;
     using DotNetNuke.Services.Exceptions;
     using DotNetNuke.Services.Localization;
 
     /// <summary>The MemberServices UserModuleBase is used to manage a User's services.</summary>
-    public partial class MemberServices : UserModuleBase
+    public partial class MemberServices(ListController listController, IHostSettings hostSettings)
+        : UserModuleBase(listController, hostSettings)
     {
+        /// <summary>Initializes a new instance of the <see cref="MemberServices"/> class.</summary>
+        [Obsolete("Deprecated in DotNetNuke 10.2.4. Please use overload with ListController. Scheduled removal in v12.0.0.")]
+        public MemberServices()
+            : this(null, null)
+        {
+        }
+
         public delegate void SubscriptionUpdatedEventHandler(object sender, SubscriptionUpdatedEventArgs e);
 
         public event SubscriptionUpdatedEventHandler SubscriptionUpdated;
@@ -102,7 +110,7 @@ namespace DotNetNuke.Modules.Admin.Security
                         formatPrice = this.FormatPrice(price);
                         break;
                     default:
-                        formatPrice = string.Format(Localization.GetString("Fee", this.LocalResourceFile), this.FormatPrice(price), period, Localization.GetString("Frequency_" + frequency, this.LocalResourceFile));
+                        formatPrice = string.Format(CultureInfo.CurrentCulture, Localization.GetString("Fee", this.LocalResourceFile), this.FormatPrice(price), period, Localization.GetString("Frequency_" + frequency, this.LocalResourceFile));
                         break;
                 }
             }
@@ -158,7 +166,7 @@ namespace DotNetNuke.Modules.Admin.Security
             try
             {
                 string serverPath = this.Request.ApplicationPath;
-                if (!serverPath.EndsWith("/"))
+                if (!serverPath.EndsWith("/", StringComparison.Ordinal))
                 {
                     serverPath += "/";
                 }
