@@ -29,6 +29,7 @@ namespace DotNetNuke.Entities.Urls
     using DotNetNuke.Entities.Portals;
     using DotNetNuke.Entities.Tabs;
     using DotNetNuke.Framework;
+    using DotNetNuke.Instrumentation;
     using DotNetNuke.Services.EventQueue;
 
     using Microsoft.Extensions.DependencyInjection;
@@ -616,7 +617,8 @@ namespace DotNetNuke.Entities.Urls
                                     requestedUrl = result.OriginalPath;
                                 }
 
-                                if (Regex.IsMatch(requestedUrl, settings.Regex404, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                                var regex404 = RegexUtils.GetCachedRegex(settings.Regex404, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                                if (regex404.IsMatch(requestedUrl))
                                 {
                                     useDNNTab = false;
 
@@ -700,6 +702,7 @@ namespace DotNetNuke.Entities.Urls
                                 {
                                     ps = (PortalSettings)context.Items["PortalSettings"];
                                     context.Items.Remove("PortalSettings"); // nix it from the context
+                                    DotNetNuke.Common.Globals.GetCurrentServiceProvider().GetRequiredService<LogRequestContext>()?.AddToLogContext("PortalId", Null.NullInteger);
                                 }
                             }
 
@@ -775,6 +778,7 @@ namespace DotNetNuke.Entities.Urls
                             {
                                 // re-add the context items portal settings back in
                                 context.Items.Add("PortalSettings", ps);
+                                DotNetNuke.Common.Globals.GetCurrentServiceProvider().GetRequiredService<LogRequestContext>()?.AddToLogContext("PortalId", ps.PortalId);
                             }
 
                             if (redirect)
@@ -1050,9 +1054,11 @@ namespace DotNetNuke.Entities.Urls
                                     if (context != null)
                                     {
                                         context.Items.Add("PortalSettings", portalSettings);
+                                        DotNetNuke.Common.Globals.GetCurrentServiceProvider().GetRequiredService<LogRequestContext>()?.AddToLogContext("PortalId", portalSettings.PortalId);
                                         result.Reason = RedirectReason.File_Url;
                                         string fileUrl = Globals.LinkClick(tab.Url, tab.TabID, -1);
                                         context.Items.Remove("PortalSettings");
+                                        DotNetNuke.Common.Globals.GetCurrentServiceProvider().GetRequiredService<LogRequestContext>()?.AddToLogContext("PortalId", Null.NullInteger);
 
                                         // take back out again, because it will be done further downstream
                                         // do a check to make sure we're not repeating the Url again, because the tabid is set, but we don't want to touch
@@ -1520,7 +1526,7 @@ namespace DotNetNuke.Entities.Urls
             }
         }
 
-        private static bool IgnoreRequest(IPortalAliasService portalAliasService, UrlAction result, string requestedPath, string ignoreRegex, HttpRequest request)
+        private static bool IgnoreRequest(IPortalAliasService portalAliasService, UrlAction result, string requestedPath, string ignoreRegexPattern, HttpRequest request)
         {
             bool retVal = false;
 
@@ -1540,9 +1546,10 @@ namespace DotNetNuke.Entities.Urls
             {
                 try
                 {
-                    if (ignoreRegex.Length > 0)
+                    if (ignoreRegexPattern.Length > 0)
                     {
-                        if (Regex.IsMatch(requestedPath, ignoreRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                        var ignoreRegex = RegexUtils.GetCachedRegex(ignoreRegexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                        if (ignoreRegex.IsMatch(requestedPath))
                         {
                             retVal = true;
                         }
@@ -1593,7 +1600,8 @@ namespace DotNetNuke.Entities.Urls
                 // 728 new regex expression to pass values straight onto the siteurls.config file
                 if (!string.IsNullOrEmpty(settings.UseSiteUrlsRegex))
                 {
-                    doSiteUrlProcessing = Regex.IsMatch(fullUrl, settings.UseSiteUrlsRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                    var siteUrlsRegex = RegexUtils.GetCachedRegex(settings.UseSiteUrlsRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                    doSiteUrlProcessing = siteUrlsRegex.IsMatch(fullUrl);
                 }
 
                 // if a virtual request, and not starting with the siteUrls.config file, go on to find the rewritten path
@@ -1944,7 +1952,8 @@ namespace DotNetNuke.Entities.Urls
                         if (allowRedirect && !string.IsNullOrEmpty(settings.ForceLowerCaseRegex))
                         {
                             // don't allow redirect if excluded from redirecting in the force lower case regex pattern (606)
-                            allowRedirect = !Regex.IsMatch(redirectPath, settings.ForceLowerCaseRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                            var forceLowerCaseRegex = RegexUtils.GetCachedRegex(settings.ForceLowerCaseRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                            allowRedirect = !forceLowerCaseRegex.IsMatch(redirectPath);
                         }
 
                         if (allowRedirect)
@@ -1953,7 +1962,7 @@ namespace DotNetNuke.Entities.Urls
                             // then don't try and redirect to the lower case /default.aspx, just let it through.
                             // we don't know whether IIS appended /Default.aspx on the end, however, we can guess
                             // if the redirectDefault.aspx is turned on (511)
-                            if (settings.RedirectDefaultPage == false && redirectPathOnly.EndsWith(Globals.glbDefaultPage, StringComparison.InvariantCultureIgnoreCase))
+                            if (!settings.RedirectDefaultPage && redirectPathOnly.EndsWith(Globals.glbDefaultPage, StringComparison.InvariantCultureIgnoreCase))
                             {
                                 // ignore this, because it's just a redirect of the /Default.aspx to /default.aspx
                             }
@@ -2133,14 +2142,14 @@ namespace DotNetNuke.Entities.Urls
 
                 if (redirectSecure)
                 {
-                    // now check to see if excluded.  Why now? because less requests are made to redirect secure,
+                    // now check to see if excluded.  Why now? because fewer requests are made to redirect secure,
                     // so we don't have to check the exclusion as often.
                     bool exclude = false;
-                    string doNotRedirectSecureRegex = settings.DoNotRedirectSecureRegex;
-                    if (!string.IsNullOrEmpty(doNotRedirectSecureRegex))
+                    if (!string.IsNullOrEmpty(settings.DoNotRedirectSecureRegex))
                     {
                         // match the raw url
-                        exclude = Regex.IsMatch(result.RawUrl, doNotRedirectSecureRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                        var doNotRedirectSecureRegex = RegexUtils.GetCachedRegex(settings.DoNotRedirectSecureRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                        exclude = doNotRedirectSecureRegex.IsMatch(result.RawUrl);
                     }
 
                     if (!exclude)
@@ -2602,6 +2611,7 @@ namespace DotNetNuke.Entities.Urls
                             if (context != null && portalSettings != null && !context.Items.Contains("PortalSettings"))
                             {
                                 context.Items.Add("PortalSettings", portalSettings);
+                                DotNetNuke.Common.Globals.GetCurrentServiceProvider().GetRequiredService<LogRequestContext>()?.AddToLogContext("PortalId", portalSettings.PortalId);
 
                                 // load PortalSettings and HostSettings dictionaries into current context
                                 // specifically for use in DotNetNuke.Web.Client, which can't reference DotNetNuke.dll to get settings the normal way
@@ -2761,8 +2771,8 @@ namespace DotNetNuke.Entities.Urls
                             // 766 : check for physical path before passing off as a 404 error
                             // 829 : change to use action physical path
                             // 893 : filter by regex pattern to exclude urls which are valid, but show up as extensionless
-                            if ((request != null && Directory.Exists(result.PhysicalPath))
-                                || Regex.IsMatch(pathWithNoQs, settings.ValidExtensionlessUrlsRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                            var extensionlessUrlsRegex = RegexUtils.GetCachedRegex(settings.ValidExtensionlessUrlsRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                            if ((request != null && Directory.Exists(result.PhysicalPath)) || extensionlessUrlsRegex.IsMatch(pathWithNoQs))
                             {
                                 // do nothing : it's a request for a valid physical path, maybe including a default document
                                 result.VirtualPath = StateBoolean.False;

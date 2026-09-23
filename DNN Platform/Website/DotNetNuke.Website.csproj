@@ -730,6 +730,7 @@
     <Compile Include="KeepAlive.aspx.designer.cs">
       <DependentUpon>KeepAlive.aspx</DependentUpon>
     </Compile>
+    <Compile Include="LoggerMessages.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Content Include="admin\Skins\DnnJsInclude.xml">
       <SubType>Designer</SubType>
@@ -767,6 +768,12 @@
     <Content Include="Providers\DataProviders\SqlDataProvider\10.02.01.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\10.02.02.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\10.02.04.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.03.00.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.03.01.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.03.02.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.03.03.SqlDataProvider" />
+    <Content Include="Providers\DataProviders\SqlDataProvider\10.04.00.SqlDataProvider" />
+    <Content Include="Resources\AppOffline\App_Offline.htm.resources" />
     <Content Include="Resources\Shared\components\SimpleMDE\codemirror.css" />
     <Content Include="Resources\Shared\components\SimpleMDE\marked.js" />
     <Content Include="Resources\Shared\components\SimpleMDE\simplemde.css" />
@@ -1191,7 +1198,6 @@
     <Content Include="Providers\DataProviders\SqlDataProvider\08.00.00.27.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\08.00.00.26.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\08.00.00.28.SqlDataProvider" />
-    <Content Include="web.config" />
     <Content Include="Providers\DataProviders\SqlDataProvider\09.11.01.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\09.11.02.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\09.12.01.SqlDataProvider" />
@@ -1213,6 +1219,7 @@
     <Content Include="Providers\DataProviders\SqlDataProvider\10.01.00.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\10.01.01.SqlDataProvider" />
     <Content Include="Providers\DataProviders\SqlDataProvider\10.02.03.SqlDataProvider" />
+    <Content Include="Config\Serilog.default.config" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

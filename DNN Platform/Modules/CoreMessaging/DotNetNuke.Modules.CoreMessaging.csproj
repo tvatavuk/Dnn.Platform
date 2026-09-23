@@ -70,6 +70,7 @@
       <Link>Properties\SolutionInfo.cs</Link>
     </Compile>
     <Compile Include="Components\CoreMessagingBusinessController.cs" />
+    <Compile Include="LoggerMessages.cs" />
     <Compile Include="Services\FilesStatus.cs" />
     <Compile Include="Services\FileUploadController.cs" />
     <Compile Include="Services\MessagingServiceController.cs" />
@@ -105,7 +106,6 @@
       <SubType>Designer</SubType>
     </None>
     <Content Include="Module.build" />
-    <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="ie-messages.css" />

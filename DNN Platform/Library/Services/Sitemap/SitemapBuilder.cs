@@ -202,8 +202,13 @@ namespace DotNetNuke.Services.Sitemap
         /// </remarks>
         public void GetSitemapIndexFile(string index, TextWriter output)
         {
+            if (!int.TryParse(index, NumberStyles.None, CultureInfo.InvariantCulture, out var theIndex))
+            {
+                return;
+            }
+
             var currentCulture = Localization.GetPageLocale((IPortalSettings)this.portalSettings).Name.ToLowerInvariant();
-            this.WriteSitemapFileToOutput($"sitemap_{index}.{currentCulture}.xml", output);
+            this.WriteSitemapFileToOutput($"sitemap_{theIndex}.{currentCulture}.xml", output);
         }
 
         private static void LoadProviders()
@@ -238,17 +243,18 @@ namespace DotNetNuke.Services.Sitemap
             writer.WriteElementString("changefreq", sitemapUrl.ChangeFrequency.ToString().ToLowerInvariant());
             writer.WriteElementString("priority", sitemapUrl.Priority.ToString("F01", CultureInfo.InvariantCulture));
 
-            ////if (sitemapUrl.AlternateUrls != null)
-            ////{
-            ////   foreach (AlternateUrl alternate in sitemapUrl.AlternateUrls)
-            ////   {
-            ////       writer.WriteStartElement("link", "http://www.w3.org/1999/xhtml");
-            ////       writer.WriteAttributeString("rel", "alternate");
-            ////       writer.WriteAttributeString("hreflang", alternate.Language);
-            ////       writer.WriteAttributeString("href", alternate.Url);
-            ////       writer.WriteEndElement();
-            ////   }
-            ////}
+            if (sitemapUrl.AlternateUrls != null)
+            {
+                foreach (AlternateUrl alternate in sitemapUrl.AlternateUrls)
+                {
+                    writer.WriteStartElement("link", "http://www.w3.org/1999/xhtml");
+                    writer.WriteAttributeString("rel", "alternate");
+                    writer.WriteAttributeString("hreflang", alternate.Language);
+                    writer.WriteAttributeString("href", alternate.Url);
+                    writer.WriteEndElement();
+                }
+            }
+
             writer.WriteEndElement();
         }
 
@@ -278,7 +284,7 @@ namespace DotNetNuke.Services.Sitemap
         }
 
         /// <summary>  Generates a sitemap file.</summary>
-        /// <param name="cached">Wheter the generated file should be cached or not.</param>
+        /// <param name="cached">Whether the generated file should be cached or not.</param>
         /// <param name="output">The output stream.</param>
         /// <param name="index">For sitemapindex files the number of the file being generated, 0 otherwise.</param>
         /// <param name="allUrls">The list of urls to be included in the file.</param>
@@ -366,10 +372,10 @@ namespace DotNetNuke.Services.Sitemap
                 {
                     string url = null;
 
-                    url = "~/Sitemap.aspx?i=" + index;
+                    url = "~/Sitemap.aspx?i=" + index.ToString(CultureInfo.InvariantCulture);
                     if (IsChildPortal(this.portalSettings, HttpContext.Current))
                     {
-                        url += "&portalid=" + this.portalSettings.PortalId;
+                        url += "&portalid=" + this.portalSettings.PortalId.ToString(CultureInfo.InvariantCulture);
                     }
 
                     writer.WriteStartElement("sitemap");

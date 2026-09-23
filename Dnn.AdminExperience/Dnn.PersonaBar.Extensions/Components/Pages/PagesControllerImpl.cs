@@ -438,27 +438,28 @@ namespace Dnn.PersonaBar.Pages.Components
                     var bIsMatch = true;
                     if (!string.IsNullOrEmpty(tabTitle))
                     {
-                        bIsMatch = bIsMatch &
-                                   Regex.IsMatch(tab.Title, tabTitle.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        var tabTitleRegex = RegexUtils.GetCachedRegex(tabTitle.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        bIsMatch &= tabTitleRegex.IsMatch(tab.Title);
                     }
 
                     if (!string.IsNullOrEmpty(tabName))
                     {
-                        bIsMatch = bIsMatch &
-                                   Regex.IsMatch(tab.TabName, tabName.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        var tabNameRegex = RegexUtils.GetCachedRegex(tabName.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        bIsMatch &= tabNameRegex.IsMatch(tab.TabName);
                     }
 
                     if (!string.IsNullOrEmpty(tabPath))
                     {
-                        bIsMatch = bIsMatch &
-                                   Regex.IsMatch(tab.TabPath, tabPath.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        var tabPathRegex = RegexUtils.GetCachedRegex(tabPath.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        bIsMatch &= tabPathRegex.IsMatch(tab.TabPath);
                     }
 
                     if (!string.IsNullOrEmpty(tabSkin))
                     {
-                        var escapedString = Regex.Replace(tabSkin, "([^\\w^\\*\\s]+)+", @"\$1", RegexOptions.Compiled | RegexOptions.ECMAScript | RegexOptions.IgnoreCase | RegexOptions.Multiline);
-                        bIsMatch = bIsMatch &
-                                   Regex.IsMatch(tab.SkinSrc, escapedString.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        var escapeRegex = RegexUtils.GetCachedRegex("([^\\w^\\*\\s]+)+", RegexOptions.Compiled | RegexOptions.ECMAScript | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                        var escapedString = escapeRegex.Replace(tabSkin, @"\$1");
+                        var skinSrcRegex = RegexUtils.GetCachedRegex(escapedString.Replace("*", ".*"), RegexOptions.IgnoreCase);
+                        bIsMatch &= skinSrcRegex.IsMatch(tab.SkinSrc);
                     }
 
                     if (bIsMatch)
@@ -599,6 +600,7 @@ namespace Dnn.PersonaBar.Pages.Components
             this.SavePagePermissions(tab, pageSettings.Permissions);
 
             var tabId = this.tabController.AddTab(tab);
+            PageHeaderTagInfo.SaveTabItems(tabId, pageSettings.PageHeaderTags?.Select(this.ToPageHeaderTagInfo));
 
             this.CreateOrUpdateContentItem(tab);
 
@@ -925,6 +927,7 @@ namespace Dnn.PersonaBar.Pages.Components
             this.SavePagePermissions(tab, pageSettings.Permissions);
 
             this.tabController.UpdateTab(tab);
+            PageHeaderTagInfo.SaveTabItems(tab.TabID, pageSettings.PageHeaderTags?.Select(this.ToPageHeaderTagInfo));
 
             this.CreateOrUpdateContentItem(tab);
 
@@ -1232,7 +1235,7 @@ namespace Dnn.PersonaBar.Pages.Components
             tab.TabSettings["AllowIndex"] = pageSettings.AllowIndex;
 
             tab.SiteMapPriority = pageSettings.SiteMapPriority;
-            tab.PageHeadText = pageSettings.PageHeadText;
+            tab.PageHeadText = Null.NullString;
 
             tab.PermanentRedirect = pageSettings.PermanentRedirect;
             tab.Url = GetInternalUrl(pageSettings);
@@ -1376,7 +1379,15 @@ namespace Dnn.PersonaBar.Pages.Components
                 tabWorkflowSettings.SetWorkflowEnabled(tab.PortalID, tab.TabID, pageSettings.WorkflowEnabled.Value);
             }
 
-            ChangeContentWorkflow(tab, pageSettings);
+            if (tabVersionSettings.IsVersioningEnabled(tab.PortalID, tab.TabID)
+                && tabWorkflowSettings.IsWorkflowEnabled(tab.PortalID, tab.TabID))
+            {
+                ChangeContentWorkflow(tab, pageSettings);
+            }
+            else
+            {
+                tab.StateID = Null.NullInteger;
+            }
         }
 
         [SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic", Justification = "Breaking change")]
@@ -1605,7 +1616,7 @@ namespace Dnn.PersonaBar.Pages.Components
         {
             tab.IconFile = sourceTab.IconFile;
             tab.IconFileLarge = sourceTab.IconFileLarge;
-            tab.PageHeadText = sourceTab.PageHeadText;
+            tab.PageHeadText = Null.NullString;
             tab.RefreshInterval = sourceTab.RefreshInterval;
             this.tabController.UpdateTab(tab);
 
@@ -1617,6 +1628,8 @@ namespace Dnn.PersonaBar.Pages.Components
                     this.tabController.UpdateTabSetting(tab.TabID, key, Convert.ToString(sourceTab.TabSettings[key], CultureInfo.InvariantCulture));
                 }
             }
+
+            PageHeaderTagInfo.SaveTabItems(tab.TabID, PageHeaderTagInfo.GetTabItems(sourceTab.TabID));
         }
 
         private void CopyModulesFromSourceTab(TabInfo tab, TabInfo sourceTab, IEnumerable<ModuleItem> includedModules)
@@ -1711,6 +1724,13 @@ namespace Dnn.PersonaBar.Pages.Components
                     }
                 }
             }
+        }
+
+        private PageHeaderTagInfo ToPageHeaderTagInfo(PageHeaderTagItem item)
+        {
+            return item == null
+                ? null
+                : new PageHeaderTagInfo { Name = item.Name, Content = item.Content };
         }
     }
 }

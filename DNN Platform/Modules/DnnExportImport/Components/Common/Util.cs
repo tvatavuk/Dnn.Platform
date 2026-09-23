@@ -29,13 +29,14 @@ namespace Dnn.ExportImport.Components.Common
     using DotNetNuke.Internal.SourceGenerators;
 
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
 
     using Newtonsoft.Json;
 
     /// <summary>A collection of utilities for import/export.</summary>
     public static partial class Util
     {
-        private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(Util));
+        private static readonly ILogger Logger = DnnLoggingController.GetLogger(typeof(Util));
         private static int noRole = Convert.ToInt32(Globals.glbRoleNothing, CultureInfo.InvariantCulture);
 
         /// <summary>Checks if a string is either null or empty (<c>""</c>).</summary>
@@ -235,7 +236,7 @@ namespace Dnn.ExportImport.Components.Common
             return totalRecords % pageSize == 0 ? totalRecords / pageSize : (totalRecords / pageSize) + 1;
         }
 
-        /// <summary>Writes an item to a file as json.</summary>
+        /// <summary>Writes an item to a file as JSON.</summary>
         /// <typeparam name="T">The type of the item to write.</typeparam>
         /// <param name="filePath">The file to save to.</param>
         /// <param name="item">The item to write.</param>
@@ -245,7 +246,7 @@ namespace Dnn.ExportImport.Components.Common
             File.WriteAllText(filePath, content, Encoding.UTF8);
         }
 
-        /// <summary>Reads an item from a json file.</summary>
+        /// <summary>Reads an item from a JSON file.</summary>
         /// <typeparam name="T">The type of the item.</typeparam>
         /// <param name="filePath">The file to read from.</param>
         /// <param name="item">The item to extract.</param>

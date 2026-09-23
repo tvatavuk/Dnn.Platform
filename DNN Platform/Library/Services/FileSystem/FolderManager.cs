@@ -35,15 +35,16 @@ namespace DotNetNuke.Services.FileSystem
     using DotNetNuke.Services.Log.EventLog;
 
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
 
     using Localization = DotNetNuke.Services.Localization.Localization;
 
     /// <summary>Exposes methods to manage folders.</summary>
-    public class FolderManager : ComponentBase<IFolderManager, FolderManager>, IFolderManager
+    public partial class FolderManager : ComponentBase<IFolderManager, FolderManager>, IFolderManager
     {
         private const string DefaultUsersFoldersPath = "Users";
         private const string DefaultMappedPathSetting = "DefaultMappedPath";
-        private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(FolderManager));
+        private static readonly ILogger Logger = DnnLoggingController.GetLogger<FolderManager>();
         private static readonly ConcurrentDictionary<int, SyncFolderData> SyncFoldersData = new ConcurrentDictionary<int, SyncFolderData>();
         private static readonly object ThreadLocker = new object();
         private readonly IEventLogger eventLogger;
@@ -118,8 +119,9 @@ namespace DotNetNuke.Services.FileSystem
                 if (FolderProvider.Instance(parentFolderMapping.FolderProviderType).SupportsMappedPaths)
                 {
                     folderMapping = parentFolderMapping;
-                    mappedPath = string.IsNullOrEmpty(parentFolder.FolderPath) ? PathUtils.Instance.FormatFolderPath(parentFolder.MappedPath + folderPath)
-                                                                            : PathUtils.Instance.FormatFolderPath(parentFolder.MappedPath + folderPath.Replace(parentFolder.FolderPath, string.Empty));
+                    mappedPath = string.IsNullOrEmpty(parentFolder.FolderPath)
+                        ? PathUtils.Instance.FormatFolderPath(parentFolder.MappedPath + folderPath)
+                        : PathUtils.Instance.FormatFolderPath(parentFolder.MappedPath + folderPath.Replace(parentFolder.FolderPath, string.Empty));
                 }
                 else if (!FolderProvider.Instance(folderMapping.FolderProviderType).SupportsMappedPaths)
                 {
@@ -128,7 +130,7 @@ namespace DotNetNuke.Services.FileSystem
                 else
                 {
                     // Parent foldermapping DOESN'T support mapped path
-                    // abd current foldermapping YES support mapped path
+                    // and current foldermapping YES support mapped path
                     mappedPath = PathUtils.Instance.FormatFolderPath(GetDefaultMappedPath(folderMapping) + mappedPath);
                 }
             }
@@ -143,7 +145,7 @@ namespace DotNetNuke.Services.FileSystem
             }
             catch (Exception ex)
             {
-                Logger.Error(ex);
+                Logger.FolderManagerAddFolderException(ex);
 
                 throw new FolderProviderException(Localization.GetExceptionMessage("AddFolderUnderlyingSystemError", "The underlying system threw an exception. The folder has not been added."), ex);
             }
@@ -1063,7 +1065,7 @@ namespace DotNetNuke.Services.FileSystem
                 catch (Exception ex)
                 {
                     // The folders that cannot be deleted from its storage location will be handled during the next sync
-                    Logger.Error(ex);
+                    Logger.FolderManagerDeleteFolderException(ex);
                 }
             }
         }
@@ -1241,7 +1243,7 @@ namespace DotNetNuke.Services.FileSystem
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex);
+                    Logger.FolderManagerGetFileSystemFoldersRecursiveException(ex);
                 }
             }
 
@@ -1624,7 +1626,7 @@ namespace DotNetNuke.Services.FileSystem
             }
             catch (Exception ex)
             {
-                Logger.Error($"Could not create folder {item.FolderPath}. EXCEPTION: {ex.Message}", ex);
+                Logger.FolderManagerCouldNotCreateFolder(ex, item.FolderPath, ex.Message);
             }
         }
 
@@ -1691,7 +1693,7 @@ namespace DotNetNuke.Services.FileSystem
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex);
+                        Logger.FolderManagerRemoveOrphanedFilesException(ex);
                     }
                 }
             }
@@ -1773,11 +1775,11 @@ namespace DotNetNuke.Services.FileSystem
                         }
                         catch (InvalidFileExtensionException ex)
                         {
-                            Logger.Info(ex.Message);
+                            Logger.FolderManagerInvalidFileExtensionException(ex.Message);
                         }
                         catch (Exception ex)
                         {
-                            Logger.Error(ex);
+                            Logger.FolderManagerAddOrUpdateFileException(ex);
                         }
                     }
                 }
@@ -1786,7 +1788,7 @@ namespace DotNetNuke.Services.FileSystem
             }
             catch (Exception ex)
             {
-                Logger.Error(ex);
+                Logger.FolderManagerSynchronizeFilesException(ex);
             }
         }
 
@@ -2110,7 +2112,7 @@ namespace DotNetNuke.Services.FileSystem
             }
             catch (Exception ex)
             {
-                Logger.Error(ex);
+                Logger.FolderManagerDeleteFolderInternalException(ex);
 
                 throw new FolderProviderException(
                     Localization.GetExceptionMessage(

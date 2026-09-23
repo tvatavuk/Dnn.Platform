@@ -46,7 +46,7 @@ namespace Dnn.ExportImport.Components.Controllers
             }
 
             importDto.ExportFileInfo =
-                GetExportFileInfo(Path.Combine(ExportFolder, importDto.PackageId, Constants.ExportManifestName));
+                GetExportFileInfo(Path.Combine(ExportFolder, Path.GetFileName(importDto.PackageId), Constants.ExportManifestName));
             var dataObject = JsonConvert.SerializeObject(importDto);
             var jobId = DataProvider.Instance().AddNewJob(
                 importDto.PortalId, userId, JobType.Import, null, null, importDto.PackageId, dataObject);
@@ -114,6 +114,13 @@ namespace Dnn.ExportImport.Components.Controllers
             var dbPath = UnPackDatabase(importFolder);
             try
             {
+                // Must be checked before opening the repository below: opening a legacy-format file
+                // migrates it in place, so the legacy signature this checks for is gone afterward.
+                if (summary != null)
+                {
+                    summary.IsCrossVersionImport = ExportImportRepository.IsLegacyExportFile(dbPath);
+                }
+
                 using (var ctx = new ExportImportRepository(dbPath))
                 {
                     if (summary != null)
@@ -135,7 +142,7 @@ namespace Dnn.ExportImport.Components.Controllers
 
         private static string GetPackageDbPath(string packageId)
         {
-            var importFolder = Path.Combine(ExportFolder, packageId);
+            var importFolder = Path.Combine(ExportFolder, Path.GetFileName(packageId));
             if (!IsValidImportFolder(importFolder))
             {
                 return null;

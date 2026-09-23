@@ -33,10 +33,12 @@ namespace Dnn.PersonaBar.Seo.Services
     using DotNetNuke.Services.Url.FriendlyUrl;
     using DotNetNuke.Web.Api;
 
+    using Microsoft.Extensions.Logging;
+
     [MenuPermission(MenuName = "Dnn.Seo")]
     public class SeoController : PersonaBarApiController
     {
-        private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(SeoController));
+        private static readonly ILogger Logger = DnnLoggingController.GetLogger<SeoController>();
         private static readonly string LocalResourcesFile = Path.Combine("~/DesktopModules/admin/Dnn.PersonaBar/Modules/Dnn.Seo/App_LocalResources/Seo.resx");
 
         private readonly Components.SeoController controller;
@@ -90,7 +92,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerGetGeneralSettingsException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -126,7 +128,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerUpdateGeneralSettingsException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -164,7 +166,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerGetRegexSettingsException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -248,7 +250,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerUpdateRegexSettingsException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -305,7 +307,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerGetSitemapSettingsException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -325,7 +327,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerCreateVerificationException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -368,7 +370,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerUpdateSitemapSettingsException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -387,7 +389,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerResetCacheException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -417,7 +419,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerGetSitemapProvidersException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -450,7 +452,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerUpdateSitemapProviderException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -480,7 +482,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerGetExtensionUrlProvidersException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -508,7 +510,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerUpdateExtensionUrlProviderStatusException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -537,7 +539,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerTestUrlException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -565,7 +567,7 @@ namespace Dnn.PersonaBar.Seo.Services
             }
             catch (Exception exc)
             {
-                Logger.Error(exc);
+                Logger.SeoControllerTestUrlRewriteException(exc);
                 return this.Request.CreateErrorResponse(HttpStatusCode.InternalServerError, exc);
             }
         }
@@ -574,10 +576,7 @@ namespace Dnn.PersonaBar.Seo.Services
         {
             try
             {
-                if (Regex.IsMatch(string.Empty, regexPattern))
-                {
-                }
-
+                _ = RegexUtils.GetCachedRegex(regexPattern).IsMatch(string.Empty);
                 return true;
             }
             catch
@@ -590,18 +589,18 @@ namespace Dnn.PersonaBar.Seo.Services
 
         private void UpdateRegexSettingsInternal(UpdateRegexSettingsRequest request)
         {
-            var settings = new Dictionary<string, string>()
+            var settings = new Dictionary<string, string>
             {
-                        { FriendlyUrlSettings.IgnoreRegexSetting, request.IgnoreRegex },
-                        { FriendlyUrlSettings.DoNotRewriteRegExSetting, request.DoNotRewriteRegex },
-                        { FriendlyUrlSettings.SiteUrlsOnlyRegexSetting, request.UseSiteUrlsRegex },
-                        { FriendlyUrlSettings.DoNotRedirectUrlRegexSetting, request.DoNotRedirectRegex },
-                        { FriendlyUrlSettings.DoNotRedirectHttpsUrlRegexSetting, request.DoNotRedirectSecureRegex },
-                        { FriendlyUrlSettings.PreventLowerCaseUrlRegexSetting, request.ForceLowerCaseRegex },
-                        { FriendlyUrlSettings.DoNotUseFriendlyUrlRegexSetting, request.NoFriendlyUrlRegex },
-                        { FriendlyUrlSettings.KeepInQueryStringRegexSetting, request.DoNotIncludeInPathRegex },
-                        { FriendlyUrlSettings.UrlsWithNoExtensionRegexSetting, request.ValidExtensionlessUrlsRegex },
-                        { FriendlyUrlSettings.ValidFriendlyUrlRegexSetting, request.RegexMatch },
+                { FriendlyUrlSettings.IgnoreRegexSetting, request.IgnoreRegex },
+                { FriendlyUrlSettings.DoNotRewriteRegExSetting, request.DoNotRewriteRegex },
+                { FriendlyUrlSettings.SiteUrlsOnlyRegexSetting, request.UseSiteUrlsRegex },
+                { FriendlyUrlSettings.DoNotRedirectUrlRegexSetting, request.DoNotRedirectRegex },
+                { FriendlyUrlSettings.DoNotRedirectHttpsUrlRegexSetting, request.DoNotRedirectSecureRegex },
+                { FriendlyUrlSettings.PreventLowerCaseUrlRegexSetting, request.ForceLowerCaseRegex },
+                { FriendlyUrlSettings.DoNotUseFriendlyUrlRegexSetting, request.NoFriendlyUrlRegex },
+                { FriendlyUrlSettings.KeepInQueryStringRegexSetting, request.DoNotIncludeInPathRegex },
+                { FriendlyUrlSettings.UrlsWithNoExtensionRegexSetting, request.ValidExtensionlessUrlsRegex },
+                { FriendlyUrlSettings.ValidFriendlyUrlRegexSetting, request.RegexMatch },
             };
 
             settings.ToList().ForEach((value) =>
